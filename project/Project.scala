@@ -3,6 +3,7 @@ import Keys._
 import com.typesafe.sbt.SbtStartScript
 import com.typesafe.sbt.SbtScalariform._
 import scalariform.formatter.preferences._
+import LogSettings._
 
 //TODO change the name of the object to reflect your project name.
 object ScalabootBuild extends Build {
@@ -44,7 +45,7 @@ object ScalabootBuild extends Build {
       .setPreference(AlignParameters, true)
   }
 
-  val defaultSettings = Defaults.defaultSettings ++ Defaults.itSettings ++ scalariformSettings ++ Seq(
+  val defaultSettings = Defaults.defaultSettings ++ Defaults.itSettings ++ logSettings ++ scalariformSettings ++ Seq(
     libraryDependencies ++= commonDeps,
     resolvers ++= commonResolvers,
     retrieveManaged := true,
