@@ -4,6 +4,10 @@ import com.typesafe.sbt.SbtStartScript
 import com.typesafe.sbt.SbtScalariform._
 import scalariform.formatter.preferences._
 import LogSettings._
+import ScalacSettings._
+import SparkSettings._
+import LogSettings._
+import XMLSettings._
 
 //TODO change the name of the object to reflect your project name.
 object ScalabootBuild extends Build {
@@ -45,7 +49,7 @@ object ScalabootBuild extends Build {
       .setPreference(AlignParameters, true)
   }
 
-  val defaultSettings = Defaults.defaultSettings ++ Defaults.itSettings ++ logSettings ++ scalariformSettings ++ Seq(
+  val defaultSettings = Defaults.defaultSettings ++ Defaults.itSettings ++ logSettings ++ scalariformSettings ++ scalacSettings ++ logSettings ++ Seq(
     libraryDependencies ++= commonDeps,
     resolvers ++= commonResolvers,
     retrieveManaged := true,
@@ -60,7 +64,7 @@ object ScalabootBuild extends Build {
   import AssemblyKeys._
   import sbtavro.SbtAvro._
 
-  lazy val hadoopSettings = defaultSettings ++ assemblySettings ++ avroSettings ++ Seq(
+  lazy val hadoopSettings = defaultSettings ++ assemblySettings ++ avroSettings ++ sparkSettings ++ Seq(
     resolvers ++= hadoopResolvers,
     libraryDependencies ++= hadoopDeps,
 
