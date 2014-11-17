@@ -11,6 +11,11 @@
 # Scala-IDE specific
 .scala_dependencies
 
+# Search analytics logs:
+
+scalaboot-core/src/main/resources/analytics.log.*
+
+
 # Build generated #
 ###################
 build
