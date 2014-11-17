@@ -12,8 +12,9 @@
 .scala_dependencies
 
 # Search analytics logs:
-
+######################
 scalaboot-core/src/main/resources/analytics.log.*
+scalaboot-core/src/main/resources/sample.5000.*
 
 
 # Build generated #
