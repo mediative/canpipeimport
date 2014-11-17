@@ -290,6 +290,9 @@ object Base { // extends Logging {
       private[util] def toReverseNameList(s: String): List[String] = {
         { if (s.startsWith(SEP)) s.substring(1) else s }.split(SEP).reverse.toList
       }
+      // creates a 'root'
+      def fromRoot(): XPath = fromRoot("root")
+      def fromRoot(rootName: String): XPath = new XPath(SEP + rootName)
       // def apply(s: String): XPath = { if (s.startsWith(SEP)) (new XPath(s)) else (new XPath(SEP + s)) }
       def add(aPath: XPath, aPart: String) = XPath(s"${aPath.s}${SEP}${aPart}")
       def removeLast(aPath: XPath) = {
@@ -560,7 +563,7 @@ object Base { // extends Logging {
             }
           }
 
-          loop(XPath("/root"), resultMap = Set.empty, headings = List.empty)
+          loop(XPath.fromRoot(), resultMap = Set.empty, headings = List.empty)
         }
         Source.fromURL(getClass.getResource(s"/${fileName}")) match {
           case x if (x == null) => {
@@ -608,7 +611,7 @@ object Base { // extends Logging {
           })
       }
     // report of SHOULD/MUST fields that are missing:
-    println(s"**************  Report of fields that are missing, on the sampling of ${setOfImpressions.size} impressions **************")
+    println(s"**************  Report of fields that are missing, on the sampling of ${setOfImpressions.size} events **************")
     listOfMissing.foreach {
       case (importanceLevel, report) =>
         println(s"**************  Report of ${importanceLevel} fields that are missing  **************")
@@ -620,6 +623,7 @@ object Base { // extends Logging {
 
     println(s"Table [headings] has ${headings.size} entries")
 
+    /*
     println(s"'${setOfImpressions.size} IMPRESSION events parsed  ==> ")
     setOfImpressions.foreach { mapOfResult =>
       // display all:
@@ -631,6 +635,7 @@ object Base { // extends Logging {
       // val eD = eventDetail(mapOfResult)
       // logger.info(s"${eD.toString}")
     }
+    */
 
   }
 }
