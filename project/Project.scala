@@ -49,7 +49,7 @@ object ScalabootBuild extends Build {
       .setPreference(AlignParameters, true)
   }
 
-  val defaultSettings = Defaults.defaultSettings ++ Defaults.itSettings ++ logSettings ++ scalariformSettings ++ scalacSettings ++ logSettings ++ Seq(
+  val defaultSettings = Defaults.defaultSettings ++ Defaults.itSettings ++ scalariformSettings ++ scalacSettings ++ logSettings ++ sparkSettings ++ Seq(
     libraryDependencies ++= commonDeps,
     resolvers ++= commonResolvers,
     retrieveManaged := true,
