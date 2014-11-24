@@ -11,6 +11,12 @@
 # Scala-IDE specific
 .scala_dependencies
 
+# Search analytics logs:
+######################
+searchanalytics-spark/src/main/resources/analytics.log.*
+searchanalytics-spark/src/main/resources/sample.5000.*
+
+
 # Build generated #
 ###################
 build
