@@ -88,6 +88,7 @@ object SearchAnalyticsBuild extends Build {
       (old) =>
         {
           case PathList("javax", "servlet", xs @ _*) => MergeStrategy.first
+          case PathList(ps @ _*) if ps.last endsWith ".xml" => MergeStrategy.first
           case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
           case "project.clj" => MergeStrategy.discard // Leiningen build files
           case x => old(x)
