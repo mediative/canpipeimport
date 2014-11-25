@@ -6,6 +6,7 @@ import scala.io.Source
 import scala.xml.pull.{ EvText, EvElemEnd, EvElemStart, XMLEventReader }
 import scala.util.control.Exception.catching
 
+// TODO: returned structure is a Map[String, List[String]] now. This doesn't help anyone - at least we need to encapsulate that in its own type.
 object Base {
   object FieldImportance extends Enumeration {
     type FieldImportance = Value
