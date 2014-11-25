@@ -114,6 +114,7 @@ object RunParser {
 
   // TODO: replace all 'println' by writing to Spark logs
   def main(args: Array[String]) {
+    // TODO: put all these constants in a config file and/or read them from parameters in call
     val HDFS_ROOT_LOCATION = "/source/canpipe/parquet" // root hdfs directory where data will live, once generated
     val HDFS_WORKING_LOCATION = s"${HDFS_ROOT_LOCATION}/workingTmp"
     val HDFS_EVENTS_WORKING_LOCATION = s"${HDFS_WORKING_LOCATION}/events" // directory where events will live, once generated
