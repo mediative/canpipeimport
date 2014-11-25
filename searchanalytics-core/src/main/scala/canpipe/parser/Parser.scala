@@ -4,7 +4,9 @@ import util.Base.XML.XPath
 
 import scala.io.Source
 import scala.xml.pull.{ EvText, EvElemEnd, EvElemStart, XMLEventReader }
+import scala.util.control.Exception.catching
 
+// TODO: returned structure is a Map[String, List[String]] now. This doesn't help anyone - at least we need to encapsulate that in its own type.
 object Base {
   object FieldImportance extends Enumeration {
     type FieldImportance = Value
@@ -32,8 +34,10 @@ object Base {
     "/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id" -> Should,
     "/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count" -> Should,
     "/root/Event/search/matchedGeo/geo" -> Must, "/root/Event/search/matchedGeo/type" -> Must, "/root/Event/search/matchedGeo/polygonIds" -> Must,
-    "/root/Event/search/allListingsTypesMainLists" -> Must, "/root/Event/search/directoriesReturned" -> Must, "/root/Event/search/allHeadings/heading/name" -> Should,
-    "/root/Event/search/allHeadings/heading/category" -> Should, "/root/Event/search/type" -> Must, "/root/Event/search/resultPage" -> Must,
+    "/root/Event/search/allListingsTypesMainLists" -> Must, "/root/Event/search/directoriesReturned" -> Must,
+    // headings
+    "/root/Event/search/allHeadings/heading/name" -> Should, "/root/Event/search/allHeadings/heading/category" -> Should,
+    "/root/Event/search/type" -> Must, "/root/Event/search/resultPage" -> Must,
     "/root/Event/search/resultPerPage" -> Must, "/root/Event/search/latitude" -> Must, "/root/Event/search/longitude" -> Must,
     "/root/Event/search/merchants/@id" -> Must, // Merchant ID (MID)
     "/root/Event/search/merchants/@zone" -> Must,
@@ -52,7 +56,7 @@ object Base {
     "/root/Event/searchAnalytics/entry/@key" -> Must,
     "/root/Event/searchAnalytics/entry/@value" -> Must)
 
-  case class headingEntry(event_id: String, heading: String, category: String)
+  case class headingEntry(event_id: String, heading_id: Long, category: String)
   object HeadingReadingStatus extends Enumeration {
     type HeadingReadingStatus = Value
     val NONE, READING_HEADING, READING_NAME, READING_CATEGORY = Value
@@ -62,6 +66,8 @@ object Base {
   class CanPipeParser(val filterRules: Set[FilterRule]) {
     def this() = this(Set.empty)
     def parseFromResources(fileName: String) = CanPipeParser.parseFromResources(fileName, filterRules)
+    def parse(xml: XMLEventReader) = CanPipeParser.parse(xml)
+    def parse(source: scala.io.Source) = CanPipeParser.parse(source)
   }
 
   object CanPipeParser {
@@ -75,14 +81,17 @@ object Base {
       if (xml.hasNext) {
         xml.next match {
           case EvElemStart(pre, label, attrs, scope) =>
-            println("HOW DID THIS HAPPENED???????????????????")
+            val errMsg = {
+              s"HOW ON EARTH DID THIS HAPPEN????????? ==> we are parsing an XML-TEXT and a new XML-EVENT ('${label}'}) is being opened!!" +
+                s"partsOfText = ${partsOfTextInt.mkString(start = "{", sep = ",", end = "}")}"
+            }
+            println(errMsg)
             // logger.error("HOW DID THIS HAPPENED???????????????????")
             // TODO: obviously throwing this Exception is only acceptable because this is a throw-away solution
-            throw new RuntimeException("HOW ON EARTH DID THIS HAPPEN????????? ==> we are parsing the TEXT and a new EVENT is being opened!!")
+            throw new RuntimeException(errMsg)
           case EvElemEnd(_, label) =>
             (label == "Event", partsOfTextInt.mkString("&"))
           case EvText(text) =>
-            // logger.info(s"TEXT ===> ${text}")
             processText(xml, partsOfTextInt ++ List(text))
           case _ => {
             processText(xml, partsOfTextInt)
@@ -98,7 +107,7 @@ object Base {
      * @param headings
      * @return
      */
-    private[parser] def processAllHeadingsForEvent(xml: XMLEventReader, eventId: String, headings: List[headingEntry]): List[headingEntry] = {
+    private[parser] def processAllHeadingsForEvent(xml: XMLEventReader, eventId: String): List[headingEntry] = {
       def loop(headings: List[headingEntry], readingStatus: HeadingReadingStatus): List[headingEntry] = {
         if (xml.hasNext) {
           xml.next match {
@@ -124,7 +133,10 @@ object Base {
                 case READING_NAME => {
                   // logger.info(s"READING_NAME -> '${text}'")
                   // add a new entry, with no category
-                  loop(headingEntry(event_id = eventId, heading = text, category = "") :: headings, readingStatus)
+                  catching(classOf[Exception]).opt { text.toLong } match {
+                    case None => loop(headings, readingStatus) // 'text' is not a Long ==> I do nothing // TODO logger.error(...)
+                    case Some(headingId) => loop(headingEntry(event_id = eventId, heading_id = headingId, category = "") :: headings, readingStatus)
+                  }
                 }
                 case READING_CATEGORY => {
                   // logger.info(s"READING_CATEGORY -> '${text}'")
@@ -132,7 +144,7 @@ object Base {
                   loop(headings.head.copy(category = text) :: headings.tail, readingStatus)
                 }
                 case _ => {
-                  println(s"NO STATUS.... -> '${text}'")
+                  // println(s"NO STATUS.... -> '${text}'")
                   // TODO logger.info(s"NO STATUS.... -> '${text}'")
                   loop(headings, readingStatus)
                 }
@@ -145,7 +157,7 @@ object Base {
           headings
         }
       }
-      loop(headings, HeadingReadingStatus.NONE)
+      loop(headings = List.empty, HeadingReadingStatus.NONE)
     }
 
     /**
@@ -154,24 +166,35 @@ object Base {
      * @return fieldLabel -> {values this label takes}
      */
     def parseEvent(xml: XMLEventReader,
-                   startXPath: XPath, eventIdOpt: Option[String]): (Map[String, List[String]], List[headingEntry]) = {
+                   startXPath: XPath, eventIdOpt: Option[String]): Map[String, List[String]] = {
 
       // println(s"parseEvent(${eventId}}): startXPath: ${startXPath.asString}")
-      def loop(eventId: String, sourceXPath: XPath, resultMap: Map[String, List[String]],
-               headings: List[headingEntry]): (Map[String, List[String]], List[headingEntry]) = {
+      def loop(eventId: String, sourceXPath: XPath, resultMap: Map[String, List[String]]): Map[String, List[String]] = {
         // println(s"\t parseEvent.loop: sourceXPath: ${sourceXPath.asString}")
 
         if (xml.hasNext) {
           xml.next match {
             case EvElemStart(pre, label, attrs, scope) => {
+              val currentXPath = XPath.add(sourceXPath, label)
               label match {
                 case "Event" =>
                   // TODO: obviously throwing this Exception is only acceptable because this is a throw-away solution
                   throw new RuntimeException("HOW ON EARTH DID THIS HAPPEN????????? ==> we are parsing an EVENT and another EVENT is being opened!!")
                 case "allHeadings" =>
-                  loop(eventId, sourceXPath, resultMap, processAllHeadingsForEvent(xml, eventId, headings))
+                  val headingsForThisEvent = processAllHeadingsForEvent(xml, eventId)
+                  // I add references for this heading on the 'events':
+                  val newResultMap =
+                    headingsForThisEvent.foldLeft(resultMap) {
+                      case (currentResultMap, aHeading) =>
+                        // name
+                        val fieldLabelName = currentXPath.asString + "/heading/name" // TODO: this is horrible. Let's fix it!
+                        val rMap = currentResultMap + (fieldLabelName -> (currentResultMap.getOrElse(fieldLabelName, List.empty) ++ List(aHeading.heading_id.toString))) // TODO: is 'heading_id' the right value to put?
+                        // category
+                        val fieldLabelCat = currentXPath.asString + "/heading/category" // TODO: this is horrible. Let's fix it!
+                        rMap + (fieldLabelCat -> (rMap.getOrElse(fieldLabelCat, List.empty) ++ List(aHeading.heading_id.toString))) // TODO: is 'heading_id' the right value to put?
+                    }
+                  loop(eventId, sourceXPath, newResultMap)
                 case _ =>
-                  val currentXPath = XPath.add(sourceXPath, label)
                   val attrsMap = attrs.asAttrMap
                   val newCurrentMap =
                     // logger.info(s"Start element: pre = ${pre}, label = ${label}")
@@ -187,47 +210,48 @@ object Base {
                           currentResultMap
                         }
                     }
-                  loop(eventId, currentXPath, newCurrentMap,
-                    headings)
+                  loop(eventId, currentXPath, newCurrentMap)
               }
             }
             case EvElemEnd(_, label) =>
               if (label == "Event") {
                 // end of the parsing of the event
                 // println(s"end of the parsing of the event. Result Map has ${resultMap.size} entries")
-                (resultMap, headings)
+                resultMap
               } else {
-                loop(eventId, XPath.removeLast(sourceXPath), resultMap, headings)
+                loop(eventId, XPath.removeLast(sourceXPath), resultMap)
               }
             case EvText(text) =>
-              // logger.info(s"TEXT ===> ${text}")
-              val (reachedEndOfEvent, fieldValue) = processText(xml, List(text))
-              if (reachedEndOfEvent)
-                (resultMap, headings)
-              else {
-                loop(eventId, XPath.removeLast(sourceXPath),
-                  {
-                    val fieldLabel = sourceXPath.asString
-                    // println(s"\t **** Found [${fieldLabel}] = '${fieldValue}'")
-                    if (fieldsDef.contains(fieldLabel)) {
-                      resultMap + (fieldLabel -> (resultMap.getOrElse(fieldLabel, List.empty) ++ List(fieldValue)))
-                    } else
-                      resultMap
-                  }, headings)
+              if (text.trim.isEmpty) {
+                loop(eventId, sourceXPath, resultMap)
+              } else {
+                val (reachedEndOfEvent, fieldValue) = processText(xml, List(text))
+                if (reachedEndOfEvent)
+                  resultMap
+                else {
+                  loop(eventId, XPath.removeLast(sourceXPath),
+                    {
+                      val fieldLabel = sourceXPath.asString
+                      // println(s"\t **** Found [${fieldLabel}] = '${fieldValue}'")
+                      if (fieldsDef.contains(fieldLabel)) {
+                        resultMap + (fieldLabel -> (resultMap.getOrElse(fieldLabel, List.empty) ++ List(fieldValue)))
+                      } else
+                        resultMap
+                    })
+                }
               }
             case _ => {
-              loop(eventId, sourceXPath, resultMap, headings)
+              loop(eventId, sourceXPath, resultMap)
             }
           }
-        } else
-          (resultMap, headings)
+        } else // end of xml
+          resultMap
       }
 
-      // TODO: if eventId is undefined, then I must be parsing an event from the beginning.
-      // insert code here to get eventId
+      // Did I get an event id?
       val optResult =
         eventIdOpt match {
-          case Some(eventId) => Some(eventId, Map.empty[String, List[String]], List.empty[headingEntry])
+          case Some(eventId) => Some(eventId, Map.empty[String, List[String]])
           case None =>
             if (xml.hasNext) {
               xml.next match {
@@ -241,7 +265,7 @@ object Base {
                     case Some(idNameAndValue) =>
                       val currentXPath = XPath.add(startXPath, label)
                       val eventid = idNameAndValue._2
-                      Some(eventid, parseAttributes(attrsMap, currentXPath), List.empty[headingEntry])
+                      Some(eventid, parseAttributes(attrsMap, currentXPath))
                   }
                 case _ =>
                   println("THIS IS NOT AN EVENT")
@@ -252,10 +276,9 @@ object Base {
             }
         }
       optResult.map {
-        case (theEventId, theResultMap, theHeadings1) =>
-          val (fieldsInImpression, theHeadings) = loop(theEventId, startXPath, resultMap = theResultMap, headings = theHeadings1)
-          (fieldsInImpression, theHeadings)
-      }.getOrElse((Map.empty[String, List[String]], List.empty[headingEntry]))
+        case (theEventId, theResultMap) =>
+          loop(theEventId, startXPath, resultMap = theResultMap)
+      }.getOrElse((Map.empty[String, List[String]]))
     }
 
     private def parseAttributes(attrsMap: Map[String, String], currentXPath: XPath): Map[String, List[String]] = {
@@ -273,58 +296,68 @@ object Base {
       }
     }
 
-    // reference: http://stackoverflow.com/questions/13184212/parsing-very-large-xml-lazily
-    def parseFromResources(fileName: String, filterRules: Set[FilterRule]): (Set[Map[String, scala.List[String]]], List[headingEntry]) = {
+    def parse(xml: XMLEventReader): Set[Map[String, List[String]]] = {
 
-      def parseAllEventsFrom(xml: XMLEventReader): (Set[Map[String, List[String]]], List[headingEntry]) = {
-
-        /**
-         *
-         * @param comingFromXPathAsReverseList
-         * @param resultMap
-         * @return a Set, where each element is an Impression Event, coded like this:
-         *         fieldLabel -> {values this label takes}
-         */
-        def loop(sourceXPath: XPath, resultMap: Set[Map[String, List[String]]], headings: List[headingEntry]): (Set[Map[String, List[String]]], List[headingEntry]) = {
-          if (xml.hasNext) {
-            xml.next match {
-              case EvElemStart(_, label, attrs, _) =>
-                if (label == "Event") {
-                  val (eventFields, eventHeadings) = {
-                    // parse attributes of the event:
-                    val attrsMap = attrs.asAttrMap
-                    attrsMap.find { case (attrName, _) => attrName == "id" } match {
-                      case None =>
-                        println("No [id] for event!!! Ignoring.")
-                        // logger.info("No [id] for impression!!! Ignoring.")
-                        (Map.empty[String, scala.List[String]], headings)
-                      case Some(idNameAndValue) =>
-                        val currentXPath = XPath.add(sourceXPath, label)
-                        val (eventMap, eventHeadings) = parseEvent(xml, currentXPath, eventIdOpt = Some(idNameAndValue._2))
-                        (eventMap ++ parseAttributes(attrsMap, currentXPath), eventHeadings ++ headings)
-                    }
+      /**
+       *
+       * @param comingFromXPathAsReverseList
+       * @param resultMap
+       * @return a Set, where each element is an Impression Event, coded like this:
+       *         fieldLabel -> {values this label takes}
+       */
+      def loop(sourceXPath: XPath, resultMap: Set[Map[String, List[String]]]): Set[Map[String, List[String]]] = {
+        if (xml.hasNext) {
+          xml.next match {
+            case EvElemStart(_, label, attrs, _) =>
+              if (label == "Event") {
+                val eventFields = {
+                  // parse attributes of the event:
+                  val attrsMap = attrs.asAttrMap
+                  attrsMap.find { case (attrName, _) => attrName == "id" } match {
+                    case None =>
+                      println("No [id] for event!!! Ignoring.")
+                      // logger.info("No [id] for impression!!! Ignoring.")
+                      Map.empty[String, scala.List[String]]
+                    case Some(idNameAndValue) =>
+                      val currentXPath = XPath.add(sourceXPath, label)
+                      val eventMap = parseEvent(xml, currentXPath, eventIdOpt = Some(idNameAndValue._2))
+                      eventMap ++ parseAttributes(attrsMap, currentXPath)
                   }
-                  // println(s"resultMap has size ${resultMap.size}")
-                  loop(sourceXPath, resultMap + eventFields, eventHeadings)
-                } else {
-                  loop(sourceXPath, resultMap, headings)
                 }
-              case _ => loop(sourceXPath, resultMap, headings)
-            }
-          } else {
-            (resultMap, headings)
+                // println(s"resultMap has size ${resultMap.size}")
+                loop(sourceXPath, resultMap + eventFields)
+              } else {
+                loop(sourceXPath, resultMap)
+              }
+            case _ => loop(sourceXPath, resultMap)
           }
+        } else {
+          resultMap
         }
-
-        loop(XPath.fromRoot(), resultMap = Set.empty, headings = List.empty)
       }
+
+      loop(XPath.fromRoot(), resultMap = Set.empty)
+    }
+
+    def parse(source: scala.io.Source): Set[Map[String, scala.List[String]]] = {
+      if (source == null) {
+        println(s"'Source is empty") // TODO: use logger
+        Set.empty
+      } else {
+        parse(new XMLEventReader(source))
+      }
+    }
+
+    // reference: http://stackoverflow.com/questions/13184212/parsing-very-large-xml-lazily
+    def parseFromResources(fileName: String, filterRules: Set[FilterRule]): Set[Map[String, scala.List[String]]] = {
+
       Source.fromURL(getClass.getResource(s"/${fileName}")) match {
         case x if (x == null) => {
-          println(s"'${fileName}' does not exist in resources.")
-          (Set.empty, List.empty)
+          println(s"'${fileName}' does not exist in resources.") // TODO: use logger
+          Set.empty
         }
         case theSource => {
-          parseAllEventsFrom(new XMLEventReader(theSource))
+          parse(new XMLEventReader(theSource))
         }
       }
 

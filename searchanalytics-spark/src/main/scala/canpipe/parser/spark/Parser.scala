@@ -223,7 +223,12 @@ class eventDetail(
 }
 
 object eventDetail {
-  def apply(aMap: Map[String, List[String]]): eventDetail = {
+  /**
+   * TODO
+   * @param aMap
+   * @return
+   */
+  def apply(aMap: Map[String, List[String]]): List[eventDetail] = {
     def list2String(l: List[String]): String = {
       l.length match {
         case 0 => ""
@@ -231,97 +236,97 @@ object eventDetail {
         case _ => l.mkString(start = "{", sep = ",", end = "}")
       }
     }
-    new eventDetail(
-      attr_id = list2String(aMap.getOrElse("/root/Event/@id", List.empty)),
-      attr_timestamp = list2String(aMap.getOrElse("/root/Event/@timestamp", List.empty)),
-      attr_site = list2String(aMap.getOrElse("/root/Event/@site", List.empty)),
-      attr_siteLanguage = list2String(aMap.getOrElse("/root/Event/@siteLanguage", List.empty)),
-      attr_userId = list2String(aMap.getOrElse("/root/Event/@userId", List.empty)),
-      attr_apiKey = list2String(aMap.getOrElse("/root/Event/apiKey", List.empty)), sessionId = list2String(aMap.getOrElse("/root/Event/sessionId", List.empty)),
-      transactionDuration = list2String(aMap.getOrElse("/root/Event/transactionDuration", List.empty)),
-      cachingUsed = list2String(aMap.getOrElse("/root/Event/cachingUsed", List.empty)), referrer = list2String(aMap.getOrElse("/root/Event/referrer", List.empty)),
-      pageName = list2String(aMap.getOrElse("/root/Event/pageName", List.empty)), requestUri = list2String(aMap.getOrElse("/root/Event/requestUri", List.empty)),
-      /* ******************************************** */
-      /* User attributes and fields */
-      user_ip = list2String(aMap.getOrElse("/root/Event/user/ip", List.empty)), user_userAgent = list2String(aMap.getOrElse("/root/Event/user/userAgent", List.empty)),
-      user_robot = list2String(aMap.getOrElse("/root/Event/user/robot", List.empty)), user_location = list2String(aMap.getOrElse("/root/Event/user/location", List.empty)),
-      user_browser = list2String(aMap.getOrElse("/root/Event/user/browser", List.empty)),
-      /* ******************************************** */
-      /* Search attributes and fields */
-      search_searchId = list2String(aMap.getOrElse("/root/Event/search/searchId", List.empty)),
-      search_what = list2String(aMap.getOrElse("/root/Event/search/what", List.empty)), search_where = list2String(aMap.getOrElse("/root/Event/search/where", List.empty)),
-      search_resultCount = list2String(aMap.getOrElse("/root/Event/search/resultCount", List.empty)),
-      search_resolvedWhat = list2String(aMap.getOrElse("/root/Event/search/resolvedWhat", List.empty)),
-      search_disambiguationPopup = list2String(aMap.getOrElse("/root/Event/search/disambiguationPopup", List.empty)),
-      search_dYMSuggestions = list2String(aMap.getOrElse("/root/Event/search/dYMSuggestions", List.empty)),
-      search_failedOrSuccess = list2String(aMap.getOrElse("/root/Event/search/failedOrSuccess", List.empty)),
-      search_hasRHSListings = list2String(aMap.getOrElse("/root/Event/search/hasRHSListings", List.empty)),
-      search_hasNonAdRollupListings = list2String(aMap.getOrElse("/root/Event/search/hasNonAdRollupListings", List.empty)),
-      search_calledBing = list2String(aMap.getOrElse("/root/Event/search/calledBing", List.empty)), search_geoORdir = list2String(aMap.getOrElse("/root/Event/search/geoORdir", List.empty)),
-      search_listingsCategoriesTiersMainListsAuxLists_category_id = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id", List.empty)),
-      search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_id = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id", List.empty)),
-      search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_count = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count", List.empty)),
-      search_matchedGeo_geo = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/geo", List.empty)),
-      search_matchedGeo_type = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/type", List.empty)),
-      search_matchedGeo_polygonIds = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/polygonIds", List.empty)),
-      search_allListingsTypesMainLists = list2String(aMap.getOrElse("/root/Event/search/allListingsTypesMainLists", List.empty)),
-      search_directoriesReturned = list2String(aMap.getOrElse("/root/Event/search/directoriesReturned", List.empty)),
-      search_allHeadings_heading_name = list2String(aMap.getOrElse("/root/Event/search/allHeadings/heading/name", List.empty)),
-      search_allHeadings_heading_category = list2String(aMap.getOrElse("/root/Event/search/allHeadings/heading/category", List.empty)),
-      search_type = list2String(aMap.getOrElse("/root/Event/search/type", List.empty)), search_resultPage = list2String(aMap.getOrElse("/root/Event/search/resultPage", List.empty)),
-      search_resultPerPage = list2String(aMap.getOrElse("/root/Event/search/resultPerPage", List.empty)), search_latitude = list2String(aMap.getOrElse("/root/Event/search/latitude", List.empty)),
-      search_longitude = list2String(aMap.getOrElse("/root/Event/search/longitude", List.empty)),
-      search_merchants_attr_id = list2String(aMap.getOrElse("/root/Event/search/merchants/@id", List.empty)),
-      search_merchants_attr_zone = list2String(aMap.getOrElse("/root/Event/search/merchants/@zone", List.empty)),
-      search_merchants_attr_latitude = list2String(aMap.getOrElse("/root/Event/search/merchants/@latitude", List.empty)),
-      search_merchants_attr_longitude = list2String(aMap.getOrElse("/root/Event/search/merchants/@longitude", List.empty)),
-      search_merchants_attr_distance = list2String(aMap.getOrElse("/root/Event/search/merchants/@distance", List.empty)),
-      search_merchants_RHSorLHS = list2String(aMap.getOrElse("/root/Event/search/merchants/RHSorLHS", List.empty)),
-      search_merchants_isNonAdRollup = list2String(aMap.getOrElse("/root/Event/search/merchants/isNonAdRollup", List.empty)),
-      search_merchants_ranking = list2String(aMap.getOrElse("/root/Event/search/merchants/ranking", List.empty)),
-      search_merchants_isListingRelevant = list2String(aMap.getOrElse("/root/Event/search/merchants/isListingRelevant", List.empty)),
-      search_merchants_entry_heading_attr_isRelevant = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/heading/@isRelevant", List.empty)),
-      search_merchants_entry_heading_categories = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/heading/categories", List.empty)),
-      search_merchants_entry_directories_channel1 = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/directories/channel1", List.empty)),
-      search_merchants_entry_directories_channel2 = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/directories/channel2", List.empty)),
-      search_merchants_entry_product_productType = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/productType", List.empty)),
-      search_merchants_entry_product_language = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/language", List.empty)),
-      search_merchants_entry_product_udac = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/udac", List.empty)),
-      search_merchants_entry_listingType = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/listingType", List.empty)),
-      search_searchAnalysis_fuzzy = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/fuzzy", List.empty)),
-      search_searchAnalysis_geoExpanded = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/geoExpanded", List.empty)),
-      search_searchAnalysis_businessName = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/businessName", List.empty)),
-      /* ******************************************** */
-      /* Search Analytics attributes and fields */
-      searchAnalytics_entry_attr_key = list2String(aMap.getOrElse("/root/Event/searchAnalytics/entry/@key", List.empty)),
-      searchAnalytics_entry_attr_value = list2String(aMap.getOrElse("/root/Event/searchAnalytics/entry/@value", List.empty)))
+    val headingsWithCats = aMap.getOrElse("/root/Event/search/allHeadings/heading/name", List("")) zip aMap.getOrElse("/root/Event/search/allHeadings/heading/category", List(""))
+    headingsWithCats.foldLeft(List.empty[eventDetail]) {
+      case (listOfEvents, (aHeading, itsCategory)) =>
+        new eventDetail(
+          search_allHeadings_heading_name = aHeading,
+          search_allHeadings_heading_category = itsCategory,
+          attr_id = list2String(aMap.getOrElse("/root/Event/@id", List.empty)),
+          attr_timestamp = list2String(aMap.getOrElse("/root/Event/@timestamp", List.empty)),
+          attr_site = list2String(aMap.getOrElse("/root/Event/@site", List.empty)),
+          attr_siteLanguage = list2String(aMap.getOrElse("/root/Event/@siteLanguage", List.empty)),
+          attr_userId = list2String(aMap.getOrElse("/root/Event/@userId", List.empty)),
+          attr_apiKey = list2String(aMap.getOrElse("/root/Event/apiKey", List.empty)), sessionId = list2String(aMap.getOrElse("/root/Event/sessionId", List.empty)),
+          transactionDuration = list2String(aMap.getOrElse("/root/Event/transactionDuration", List.empty)),
+          cachingUsed = list2String(aMap.getOrElse("/root/Event/cachingUsed", List.empty)), referrer = list2String(aMap.getOrElse("/root/Event/referrer", List.empty)),
+          pageName = list2String(aMap.getOrElse("/root/Event/pageName", List.empty)), requestUri = list2String(aMap.getOrElse("/root/Event/requestUri", List.empty)),
+          /* ******************************************** */
+          /* User attributes and fields */
+          user_ip = list2String(aMap.getOrElse("/root/Event/user/ip", List.empty)), user_userAgent = list2String(aMap.getOrElse("/root/Event/user/userAgent", List.empty)),
+          user_robot = list2String(aMap.getOrElse("/root/Event/user/robot", List.empty)), user_location = list2String(aMap.getOrElse("/root/Event/user/location", List.empty)),
+          user_browser = list2String(aMap.getOrElse("/root/Event/user/browser", List.empty)),
+          /* ******************************************** */
+          /* Search attributes and fields */
+          search_searchId = list2String(aMap.getOrElse("/root/Event/search/searchId", List.empty)),
+          search_what = list2String(aMap.getOrElse("/root/Event/search/what", List.empty)), search_where = list2String(aMap.getOrElse("/root/Event/search/where", List.empty)),
+          search_resultCount = list2String(aMap.getOrElse("/root/Event/search/resultCount", List.empty)),
+          search_resolvedWhat = list2String(aMap.getOrElse("/root/Event/search/resolvedWhat", List.empty)),
+          search_disambiguationPopup = list2String(aMap.getOrElse("/root/Event/search/disambiguationPopup", List.empty)),
+          search_dYMSuggestions = list2String(aMap.getOrElse("/root/Event/search/dYMSuggestions", List.empty)),
+          search_failedOrSuccess = list2String(aMap.getOrElse("/root/Event/search/failedOrSuccess", List.empty)),
+          search_hasRHSListings = list2String(aMap.getOrElse("/root/Event/search/hasRHSListings", List.empty)),
+          search_hasNonAdRollupListings = list2String(aMap.getOrElse("/root/Event/search/hasNonAdRollupListings", List.empty)),
+          search_calledBing = list2String(aMap.getOrElse("/root/Event/search/calledBing", List.empty)), search_geoORdir = list2String(aMap.getOrElse("/root/Event/search/geoORdir", List.empty)),
+          search_listingsCategoriesTiersMainListsAuxLists_category_id = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id", List.empty)),
+          search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_id = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id", List.empty)),
+          search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_count = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count", List.empty)),
+          search_matchedGeo_geo = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/geo", List.empty)),
+          search_matchedGeo_type = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/type", List.empty)),
+          search_matchedGeo_polygonIds = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/polygonIds", List.empty)),
+          search_allListingsTypesMainLists = list2String(aMap.getOrElse("/root/Event/search/allListingsTypesMainLists", List.empty)),
+          search_directoriesReturned = list2String(aMap.getOrElse("/root/Event/search/directoriesReturned", List.empty)),
+          search_type = list2String(aMap.getOrElse("/root/Event/search/type", List.empty)), search_resultPage = list2String(aMap.getOrElse("/root/Event/search/resultPage", List.empty)),
+          search_resultPerPage = list2String(aMap.getOrElse("/root/Event/search/resultPerPage", List.empty)), search_latitude = list2String(aMap.getOrElse("/root/Event/search/latitude", List.empty)),
+          search_longitude = list2String(aMap.getOrElse("/root/Event/search/longitude", List.empty)),
+          search_merchants_attr_id = list2String(aMap.getOrElse("/root/Event/search/merchants/@id", List.empty)),
+          search_merchants_attr_zone = list2String(aMap.getOrElse("/root/Event/search/merchants/@zone", List.empty)),
+          search_merchants_attr_latitude = list2String(aMap.getOrElse("/root/Event/search/merchants/@latitude", List.empty)),
+          search_merchants_attr_longitude = list2String(aMap.getOrElse("/root/Event/search/merchants/@longitude", List.empty)),
+          search_merchants_attr_distance = list2String(aMap.getOrElse("/root/Event/search/merchants/@distance", List.empty)),
+          search_merchants_RHSorLHS = list2String(aMap.getOrElse("/root/Event/search/merchants/RHSorLHS", List.empty)),
+          search_merchants_isNonAdRollup = list2String(aMap.getOrElse("/root/Event/search/merchants/isNonAdRollup", List.empty)),
+          search_merchants_ranking = list2String(aMap.getOrElse("/root/Event/search/merchants/ranking", List.empty)),
+          search_merchants_isListingRelevant = list2String(aMap.getOrElse("/root/Event/search/merchants/isListingRelevant", List.empty)),
+          search_merchants_entry_heading_attr_isRelevant = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/heading/@isRelevant", List.empty)),
+          search_merchants_entry_heading_categories = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/heading/categories", List.empty)),
+          search_merchants_entry_directories_channel1 = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/directories/channel1", List.empty)),
+          search_merchants_entry_directories_channel2 = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/directories/channel2", List.empty)),
+          search_merchants_entry_product_productType = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/productType", List.empty)),
+          search_merchants_entry_product_language = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/language", List.empty)),
+          search_merchants_entry_product_udac = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/udac", List.empty)),
+          search_merchants_entry_listingType = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/listingType", List.empty)),
+          search_searchAnalysis_fuzzy = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/fuzzy", List.empty)),
+          search_searchAnalysis_geoExpanded = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/geoExpanded", List.empty)),
+          search_searchAnalysis_businessName = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/businessName", List.empty)),
+          /* ******************************************** */
+          /* Search Analytics attributes and fields */
+          searchAnalytics_entry_attr_key = list2String(aMap.getOrElse("/root/Event/searchAnalytics/entry/@key", List.empty)),
+          searchAnalytics_entry_attr_value = list2String(aMap.getOrElse("/root/Event/searchAnalytics/entry/@value", List.empty))) :: listOfEvents
+    }
 
   }
 }
 
 // TODO: replace 'println's by Spark logs writing
 object Parser {
-
-  import canpipe.parser.{ Base => BasicParserObj }
   import canpipe.parser.Base.{ CanPipeParser => BasicParser }
-  def parseEventGroup(events: EventGroup, filterRules: Set[FilterRule]): (RDD[eventDetail], RDD[BasicParserObj.headingEntry]) = {
-    val rddEventsAndHeadings =
+
+  def parseEventGroup(events: EventGroup, filterRules: Set[FilterRule]): RDD[eventDetail] = {
+    val rddEventsRaw =
       events.eventsAsString.map { anEventAsString =>
         Source.fromString(anEventAsString) match {
           case x if (x == null) => {
             println(s"'Error building a Source from a particular XML event")
-            (Map.empty[String, scala.List[String]], List.empty[BasicParserObj.headingEntry])
+            Map.empty[String, scala.List[String]]
           }
           case theSource => {
-            val (rddMap, rddHeadings) = BasicParser.parseEvent(xml = new XMLEventReader(theSource), startXPath = XPath("/root/Event"), eventIdOpt = None)
-
-            (rddMap, rddHeadings)
+            val rddMap = BasicParser.parseEvent(xml = new XMLEventReader(theSource), startXPath = XPath("/root/Event"), eventIdOpt = None)
+            rddMap
           }
         }
       }
-    val rddEvents = rddEventsAndHeadings.map(_._1).map(eventDetail(_))
-    val rddHeadings = rddEventsAndHeadings.map(_._2).flatMap(identity)
-    (rddEvents, rddHeadings)
+    rddEventsRaw.flatMap(eventDetail(_))
   }
 
 }

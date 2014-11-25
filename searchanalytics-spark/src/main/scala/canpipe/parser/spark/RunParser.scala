@@ -79,7 +79,7 @@ object RunParser {
     }
   }
 
-  private[spark] def doItFor(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String) = {
+  private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String) = {
     import sqlContext._
 
     def sanityCheckParquetGeneration(whereWasItSaved: String): Boolean = {
@@ -114,11 +114,10 @@ object RunParser {
 
   // TODO: replace all 'println' by writing to Spark logs
   def main(args: Array[String]) {
+    // TODO: put all these constants in a config file and/or read them from parameters in call
     val HDFS_ROOT_LOCATION = "/source/canpipe/parquet" // root hdfs directory where data will live, once generated
     val HDFS_WORKING_LOCATION = s"${HDFS_ROOT_LOCATION}/workingTmp"
-    val HDFS_HEADINGS_WORKING_LOCATION = s"${HDFS_WORKING_LOCATION}/headings" // directory where headings will live, once generated
     val HDFS_EVENTS_WORKING_LOCATION = s"${HDFS_WORKING_LOCATION}/events" // directory where events will live, once generated
-    val HDFS_HEADINGS_LOCATION = s"${HDFS_ROOT_LOCATION}/headings" // directory where headings will live, once generated
     val HDFS_EVENTS_LOCATION = s"${HDFS_ROOT_LOCATION}/events" // directory where events will live, once generated
     val argsParsed = parseArgs(args.toList)
     if (!argsParsed.contains(FILENAMELABEL)) {
@@ -149,12 +148,9 @@ object RunParser {
       val sc = new SparkContext("local[4]", "appName")
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
       import sqlContext._
-      val (allEvents, allHeadings) = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
+      val allEvents = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
-      // events:
-      doItFor(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = fileNameNoDir, dirToSynchronize = HDFS_EVENTS_LOCATION)
-      // headings:
-      doItFor(sqlContext, thisRDD = allHeadings, workingDir = HDFS_HEADINGS_WORKING_LOCATION, prefixOfFile = s"${fileNameNoDir}.headings", dirToSynchronize = HDFS_HEADINGS_LOCATION)
+      saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = fileNameNoDir, dirToSynchronize = HDFS_EVENTS_LOCATION)
     }
 
   }

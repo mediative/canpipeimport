@@ -19,7 +19,7 @@ object RunParser {
     val fileNameToParseFromResources = "sample.50.xml"
     val myParser = new CanPipeParser(filterRules)
     println("COMPUTATION STARTED")
-    val (timeItTook, (setOfImpressions, headings)) = timeInMs(myParser.parseFromResources(fileNameToParseFromResources))
+    val (timeItTook, setOfImpressions) = timeInMs(myParser.parseFromResources(fileNameToParseFromResources))
     println(s"Computation finished in ${timeItTook} ms.")
 
     val listOfMissing: List[(FieldImportance.Value, Map[String, Long])] =
@@ -42,8 +42,6 @@ object RunParser {
             println(s"'${aFieldName}', missed ${howManyTimesMissing} times")
         }
     }
-
-    println(s"Table [headings] has ${headings.size} entries")
 
     /*
     println(s"'${setOfImpressions.size} IMPRESSION events parsed  ==> ")
