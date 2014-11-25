@@ -40,7 +40,7 @@ class SparkParserTest extends FlatSpec with BeforeAndAfter {
 
   }
 
-  s"Result of parsing a CanPipe XML to RDD" should "yield the same number of records as parsing 'normally'" in {
+  s"Result of parsing a CanPipe XML to RDD" should "yield the same number of records as parsing 'normally' * number of headings in events" in {
     val testName = "my test"
     val sc = new SparkContext("local[4]", testName)
     val myBasicParser = new BasicParser()
@@ -50,14 +50,15 @@ class SparkParserTest extends FlatSpec with BeforeAndAfter {
       case (fileInfo, _) =>
         info(s"Testing ${fileInfo.name}")
         val hdfsFileName = resourceFileName2HDFSFileName(fileInfo.name)
-        val (r, h) = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
+        val r = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
         val eventsInRDD = r.count()
         withClue(s"Result is empty ") { assert(eventsInRDD > 0) }
-        val headingsInRDD = h.count()
-        withClue(s"Headings is empty ") { assert(headingsInRDD > 0) }
-        val (setOfEvents, headings) = myBasicParser.parseFromResources(fileInfo.name)
-        withClue("Events count differ") { assert(eventsInRDD == setOfEvents.size) }
-        withClue("Headings count differ") { assert(headingsInRDD == headings.size) }
+        val setOfEvents = myBasicParser.parseFromResources(fileInfo.name)
+        val howManyExpectedInRDD =
+          setOfEvents.foldLeft(0L) { (count, resultForAnEvent) =>
+            count + resultForAnEvent.get("/root/Event/search/allHeadings/heading/name").getOrElse(List("")).length
+          }
+        withClue(s"Expected ${howManyExpectedInRDD}, found ${eventsInRDD}") { assert(eventsInRDD == howManyExpectedInRDD) }
     }
 
     sc.stop()
