@@ -16,6 +16,12 @@ object Base { // extends Logging {
   def using[A <: { def close(): Unit }, B](param: A)(f: A => B): B =
     try { f(param) } finally { param.close() }
 
+  object String {
+
+    def generateRandom(length: Int): String = scala.util.Random.alphanumeric.take(length).mkString("")
+
+  }
+
   object XML {
     // TODO: I reckon this can be implemented using a Stack (http://www.scala-lang.org/api/current/index.html#scala.collection.mutable.Stack)
     case class XPath(s: String) {
