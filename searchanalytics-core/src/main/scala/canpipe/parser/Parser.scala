@@ -17,6 +17,7 @@ object Base {
   val fieldsDef: Map[String, FieldImportance] = Map(
     "/root/Event/@id" -> Must,
     "/root/Event/@timestamp" -> Must,
+    "/root/Event/timestampId" -> Must,
     "/root/Event/@site" -> Must,
     "/root/Event/@siteLanguage" -> Must,
     "/root/Event/@eventType" -> Must, // Two values are possible "impression" which is a SERP event, or "click" which is an MP event
@@ -281,14 +282,26 @@ object Base {
       }.getOrElse((Map.empty[String, List[String]]))
     }
 
-    private def parseAttributes(attrsMap: Map[String, String], currentXPath: XPath): Map[String, List[String]] = {
+    private def parseAttributes(attrsMap: Map[String, String], currentXPath: XPath): Map[String, List[String]] = { // TODO: make it clear (for the compiler) that the type returned here is the same as the one returned on the 'parse'
+      // TODO: the following Regex should be defined somewhere else
+      val DateFromXMLRegex = """(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d).(\d\d\d)-(\d\d):(\d\d)""".r
       attrsMap.foldLeft(Map.empty[String, List[String]]) {
         case (currentResultMap, (attrName, attrValue)) =>
           val attrLabel = "@" + attrName
           val fieldLabel = XPath.add(currentXPath, attrLabel).asString
           if (fieldsDef.contains(fieldLabel)) {
             // logger.info(s"\t **** Found [${fieldLabel}] ==> '${label}' metadata field '${attrName}' = '${attrValue}'")
-            currentResultMap + (fieldLabel -> (currentResultMap.getOrElse(fieldLabel, List.empty) ++ List(attrValue)))
+            val aMap = currentResultMap + (fieldLabel -> (currentResultMap.getOrElse(fieldLabel, List.empty) ++ List(attrValue)))
+            if (attrName == "timestamp") {
+              try {
+                val DateFromXMLRegex(year, month, day, hour, mins, secs, msecs, hourToGMT, minsToGMT) = attrValue
+                val timestampFKLabel = XPath.add(currentXPath, "timestampId").asString
+                aMap + (timestampFKLabel -> List(year + month + day))
+              } catch {
+                case e: Exception => aMap
+              }
+            } else
+              aMap
           } else {
             // logger.info(s"\t NOT INTERESTING [${fieldLabel}] ==> '${label}' metadata field '${attrName}' = '${attrValue}'")
             currentResultMap
