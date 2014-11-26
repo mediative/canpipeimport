@@ -48,7 +48,7 @@ class eventDetail(
   val tierUdacCountList: String /* /root/Event/search/allListingsTypesMainLists */ ,
   val directoryIdList: String /* /root/Event/search/directoriesReturned */ ,
   val headingId: Long /* /root/Event/search/allHeadings/heading/name */ ,
-  val headingRelevance: Char /* 'A' or 'B'*/ /* /root/Event/search/allHeadings/heading/category */ ,
+  val headingRelevance: String /* 'A' or 'B'*/ /* /root/Event/search/allHeadings/heading/category */ , // TODO: put this as Char. Spark had problems with it - sove them! scala.MatchError: scala.Char (of class scala.reflect.internal.Types$TypeRef$$anon$6)
   val searchType: String /* /root/Event/search/type */ , val searchResultPage: String /* /root/Event/search/resultPage */ ,
   val searchResultPerPage: String /* /root/Event/search/resultPerPage */ , val searchLatitude: String /* /root/Event/search/latitude */ ,
   val searchLongitude: String /* /root/Event/search/longitude */ ,
@@ -297,7 +297,7 @@ object eventDetail {
       case (listOfEvents, (aHeading, itsCategory)) =>
         new eventDetail(
           headingId = runOrDefault[String, Long] { _.toLong }(-1L)(aHeading),
-          headingRelevance = runOrDefault[String, Char] { s => s.charAt(0) }('X')(itsCategory),
+          headingRelevance = itsCategory,
           eventId = getOrEmpty("/root/Event/@id"),
           timestamp = getOrEmpty("/root/Event/@timestamp"),
           timestampId = parseAsLongOrDefault("/root/Event/timestampId", "timestampId"),
