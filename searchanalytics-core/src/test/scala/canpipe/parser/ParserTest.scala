@@ -136,6 +136,19 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     withClue(s"Result has ${resultSize} entries") { assert(resultSize == 2) }
   }
 
+  it should "correctly read the event ids" in {
+    val eventsXML =
+      <root>
+        <Event id="3a3637cd-21f9-40c9-9e1d-b44890ffb840" timestamp="2014-09-30T12:00:00.054-04:00" site="ypg" siteLanguage="EN" eventType="impression" isMap="false" typeOfLog="impression"></Event>
+        <Event id="3a3637cd-21f9-40c9-9e1d-b44890ffb841" timestamp="2014-09-30T12:00:00.054-04:00" site="ypg" siteLanguage="EN" eventType="impression" isMap="false" typeOfLog="impression"></Event>
+      </root>
+    val result = testParse(eventsXML)
+    val resultSize = result.size
+    withClue(s"Result has ${resultSize} entries") { assert(resultSize == 2) }
+    val numEventsNotContainingId = result.map { _.contains("/root/Event/@id") }.filter(!_).size
+    withClue(s"${numEventsNotContainingId} events (out of ${resultSize}) do not contain id") { assert(numEventsNotContainingId == 0) }
+  }
+
   it should "not parse headings, if there isn't any " in {
     val eventsXML =
       <root>

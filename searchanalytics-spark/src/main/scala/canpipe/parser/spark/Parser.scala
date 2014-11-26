@@ -247,11 +247,34 @@ object eventDetail {
   }
 
   /**
+   *
+   * TODO: use logger
+   * @param e
+   * @return
+   */
+  private[spark] def sanityCheck(e: eventDetail): Option[eventDetail] = {
+    if (e.eventId.isEmpty) {
+      // println("Event has an empty id")
+      None
+    } else
+      Some(e)
+  }
+
+  /**
    * TODO
    * @param aMap
    * @return
    */
   def apply(aMap: Map[String, List[String]]): List[eventDetail] = {
+
+    val mapOnlyEmpties = aMap.filter(_._1.isEmpty)
+    if (!mapOnlyEmpties.isEmpty) {
+      println("EMPTY FIELDS ========> ")
+      mapOnlyEmpties.foreach { case (key, _) => println(key) }
+    }
+    // println("NON-EMPTY FIELDS ========> ")
+    // aMap.filter(!_._1.isEmpty).foreach { case (key, value) => println(key) }
+
     def getOrEmpty(fieldName: String): String = {
       list2String(aMap.getOrElse(fieldName, List.empty))
     }
@@ -293,9 +316,9 @@ object eventDetail {
       parseAsLong(fieldNameInMap).getOrElse { displayLongError(fieldNameInMap, resultFieldName); Long.MinValue }
     }
     val headingsWithCats = aMap.getOrElse("/root/Event/search/allHeadings/heading/name", List("")) zip aMap.getOrElse("/root/Event/search/allHeadings/heading/category", List(""))
-    headingsWithCats.foldLeft(List.empty[eventDetail]) {
-      case (listOfEvents, (aHeading, itsCategory)) =>
-        new eventDetail(
+    headingsWithCats.foldLeft(List.empty[Option[eventDetail]]) {
+      case (listOfEventOpts, (aHeading, itsCategory)) =>
+        sanityCheck(new eventDetail(
           headingId = runOrDefault[String, Long] { _.toLong }(-1L)(aHeading),
           headingRelevance = itsCategory,
           eventId = getOrEmpty("/root/Event/@id"),
@@ -366,9 +389,8 @@ object eventDetail {
           /* ******************************************** */
           /* Search Analytics attributes and fields */
           key = getOrEmpty("/root/Event/searchAnalytics/entry/@key"),
-          value = getOrEmpty("/root/Event/searchAnalytics/entry/@value")) :: listOfEvents
-    }
-
+          value = getOrEmpty("/root/Event/searchAnalytics/entry/@value"))) :: listOfEventOpts
+    }.flatten
   }
 }
 
@@ -385,8 +407,7 @@ object Parser {
             Map.empty[String, scala.List[String]]
           }
           case theSource => {
-            val rddMap = BasicParser.parseEvent(xml = new XMLEventReader(theSource), startXPath = XPath("/root/Event"), eventIdOpt = None)
-            rddMap
+            BasicParser.parseEvent(xml = new XMLEventReader(theSource), startXPath = XPath("/root/Event"), eventIdOpt = None)
           }
         }
       }
