@@ -229,6 +229,32 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     withClue(s"num heading categories should be 2, but it is: ${headingsCategories.length}") { assert(headingsCategories.length == 2) }
   }
 
+  it should "generate the correct timestamp and its 'foreign-key', as the timestamp is valid" in {
+    val eventsXML =
+      <root>
+        <Event id="54de05a7-cc76-4e7b-9244-108b5cfd2962" timestamp="2014-09-30T11:59:59.956-04:00" site="ypg" siteLanguage="EN" eventType="click" isMap="false" typeOfLog="click">
+          <search>
+            <searchId>272d283c-4905-4f15-8fa1-0371f6a0728f</searchId>
+            <allHeadings>
+              <heading>
+                <name>00304200</name>
+                <category>B</category>
+              </heading>
+              <heading>
+                <name>00304201</name>
+                <category>A</category>
+              </heading>
+            </allHeadings>
+          </search>
+        </Event>
+      </root>
+    val setOfResults = testParse(eventsXML)
+    assert(setOfResults.size == 1)
+    val firstEvent = setOfResults.head
+    withClue("No timestamp entry") { assert(firstEvent.get("/root/Event/@timestamp").isDefined) }
+    withClue("No timestamp FK entry") { assert(firstEvent.get("/root/Event/timestampId").isDefined) }
+  }
+
   case class fileFromResources(name: String, eventsItContains: Long)
 
   val resourceFileNamesAndNumberOfEvents: List[(fileFromResources, Int)] = List(
