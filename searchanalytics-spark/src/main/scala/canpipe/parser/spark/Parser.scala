@@ -46,7 +46,7 @@ class eventDetail(
   val searchGeoType: String /* /root/Event/search/matchedGeo/type */ ,
   val searchGeoPolygonIds: String /* /root/Event/search/matchedGeo/polygonIds */ ,
   val tierUdacCountList: String /* /root/Event/search/allListingsTypesMainLists */ ,
-  val directoryIdList: String /* /root/Event/search/directoriesReturned */ ,
+  val directoryId: Long /* decomposition of /root/Event/search/directoriesReturned */ ,
   val headingId: Long /* /root/Event/search/allHeadings/heading/name */ ,
   val headingRelevance: String /* 'A' or 'B'*/ /* /root/Event/search/allHeadings/heading/category */ , // TODO: put this as Char. Spark had problems with it - sove them! scala.MatchError: scala.Char (of class scala.reflect.internal.Types$TypeRef$$anon$6)
   val searchType: String /* /root/Event/search/type */ , val searchResultPage: String /* /root/Event/search/resultPage */ ,
@@ -116,7 +116,7 @@ class eventDetail(
          | searchGeoType (/root/Event/search/matchedGeo/type) = ${searchGeoType},
          | searchGeoPolygonIds (/root/Event/search/matchedGeo/polygonIds) = ${searchGeoPolygonIds},
          | tierUdacCountList (/root/Event/search/allListingsTypesMainLists) = ${tierUdacCountList},
-         | directoryIdList (/root/Event/search/directoriesReturned) = ${directoryIdList},
+         | directoryId (/root/Event/search/directoriesReturned) = ${directoryId},
          | headingId (/root/Event/search/allHeadings/heading/name) = ${headingId},
          | headingRelevance (/root/Event/search/allHeadings/heading/category) = ${headingRelevance},
          | searchType (/root/Event/search/type) = ${searchType},
@@ -192,7 +192,7 @@ class eventDetail(
     case 34 => searchGeoType
     case 35 => searchGeoPolygonIds
     case 36 => tierUdacCountList
-    case 37 => directoryIdList
+    case 37 => directoryId
     case 38 => headingId
     case 39 => headingRelevance
     case 40 => searchType
@@ -315,9 +315,24 @@ object eventDetail {
     def parseAsLongOrDefault(fieldNameInMap: String, resultFieldName: String): Long = {
       parseAsLong(fieldNameInMap).getOrElse { displayLongError(fieldNameInMap, resultFieldName); Long.MinValue }
     }
-    val headingsWithCats = aMap.getOrElse("/root/Event/search/allHeadings/heading/name", List("")) zip aMap.getOrElse("/root/Event/search/allHeadings/heading/category", List(""))
-    headingsWithCats.foldLeft(List.empty[Option[eventDetail]]) {
-      case (listOfEventOpts, (aHeading, itsCategory)) =>
+
+    val l = aMap.getOrElse("/root/Event/search/directoriesReturned", List(""))
+    val dirIds = {
+      if (l.head.trim.isEmpty) {
+        List(-1L) // TODO: NB = when directory does not match anything, the value in table will be -1L. That OK?
+      } else {
+        val dirsReturned = l.head
+        // 'dirsReturned' look like this: 107553:One Toronto Core West,107556:One Toronto Core SE,107555:One Toronto Core Ctr,107554:One Toronto Core NE
+        val DirectoryRegex = """(\d*):(.*)""".r // TODO: put this somewhere else
+        dirsReturned.split(",").flatMap { aDir => catching(classOf[Exception]).opt { val DirectoryRegex(id, name) = aDir; id.toLong } }.toList
+      }
+    }
+    val headingsNames = aMap.getOrElse("/root/Event/search/allHeadings/heading/name", List(""))
+    val headingsCats = aMap.getOrElse("/root/Event/search/allHeadings/heading/category", List(""))
+    val headingsWithCats = headingsNames zip headingsCats
+    val dirsHeadingsAndCats = for (dir <- dirIds; headingAndCat <- headingsWithCats) yield (dir, headingAndCat)
+    dirsHeadingsAndCats.foldLeft(List.empty[Option[eventDetail]]) {
+      case (listOfEventOpts, (aDirectoryId, (aHeading, itsCategory))) =>
         sanityCheck(new eventDetail(
           headingId = runOrDefault[String, Long] { _.toLong }(-1L)(aHeading),
           headingRelevance = itsCategory,
@@ -362,7 +377,7 @@ object eventDetail {
           searchGeoType = getOrEmpty("/root/Event/search/matchedGeo/type"),
           searchGeoPolygonIds = getOrEmpty("/root/Event/search/matchedGeo/polygonIds"),
           tierUdacCountList = getOrEmpty("/root/Event/search/allListingsTypesMainLists"),
-          directoryIdList = getOrEmpty("/root/Event/search/directoriesReturned"),
+          directoryId = aDirectoryId, // decomposition of getOrEmpty("/root/Event/search/dirsReturned"),
           searchType = getOrEmpty("/root/Event/search/type"), searchResultPage = getOrEmpty("/root/Event/search/resultPage"),
           searchResultPerPage = list2String(aMap.getOrElse("/root/Event/search/resultPerPage", List.empty)), searchLatitude = getOrEmpty("/root/Event/search/latitude"),
           searchLongitude = getOrEmpty("/root/Event/search/longitude"),

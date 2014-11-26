@@ -233,7 +233,6 @@ object Base {
                   loop(eventId, XPath.removeLast(sourceXPath),
                     {
                       val fieldLabel = sourceXPath.asString
-                      // println(s"\t **** Found [${fieldLabel}] = '${fieldValue}'")
                       if (fieldsDef.contains(fieldLabel)) {
                         resultMap + (fieldLabel -> (resultMap.getOrElse(fieldLabel, List.empty) ++ List(fieldValue)))
                       } else
