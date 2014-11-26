@@ -16,7 +16,7 @@ class eventDetail(
   val timestamp: String, /* /root/Event/@timestamp */
   val eventSite: String, /* /root/Event/@site */
   val eventSiteLanguage: String, /* /root/Event/@siteLanguage */
-  // NOT NEEDED ==> (since it is ALWAYS an Impression) "/root/Event/@eventType": String, // Two values are possible "impression" which is a SERP event, or "click" which is an MP event
+  // TODO: we need "/root/Event/@eventType": String, // Two values are possible "impression" which is a SERP event, or "click" which is an MP event
   val userId: String, /* /root/Event/@userId */
   val apiKey: String /* /root/Event/apiKey */ , val userSessionId: String /* /root/Event/sessionId */ ,
   val transactionDuration: Long /* /root/Event/transactionDuration */ ,
