@@ -2,8 +2,8 @@ package canpipe.parser.spark
 
 import canpipe.parser.FilterRule
 import org.apache.spark.rdd.RDD
-import util.Base
 import util.Base.XML.XPath
+import scala.util.control.Exception._
 
 import scala.io.Source
 import scala.xml.pull.XMLEventReader
@@ -11,137 +11,140 @@ import scala.xml.pull.XMLEventReader
 class eventDetail(
   /* ******************************************** */
   /* Main event attributes and fields */
-  val attr_id: String, /* /root/Event/@id */
-  val attr_timestamp: String, /* /root/Event/@timestamp */
-  val attr_site: String, /* /root/Event/@site */
-  val attr_siteLanguage: String, /* /root/Event/@siteLanguage */
-  // NOT NEEDED ==> (since it is ALWAYS an Impression) "/root/Event/@eventType": String, // Two values are possible "impression" which is a SERP event, or "click" which is an MP event
-  val attr_userId: String, /* /root/Event/@userId */
-  val attr_apiKey: String /* /root/Event/apiKey */ , val sessionId: String /* /root/Event/sessionId */ ,
-  val transactionDuration: String /* /root/Event/transactionDuration */ ,
-  val cachingUsed: String /* /root/Event/cachingUsed */ , val referrer: String /* /root/Event/referrer */ ,
+  val eventId: String, /* /root/Event/@id */
+  val timestamp: String, /* /root/Event/@timestamp */
+  val eventSite: String, /* /root/Event/@site */
+  val eventSiteLanguage: String, /* /root/Event/@siteLanguage */
+  // TODO: we need "/root/Event/@eventType": String, // Two values are possible "impression" which is a SERP event, or "click" which is an MP event
+  val userId: String, /* /root/Event/@userId */
+  val apiKey: String /* /root/Event/apiKey */ , val userSessionId: String /* /root/Event/sessionId */ ,
+  val transactionDuration: Long /* /root/Event/transactionDuration */ ,
+  val isResultCached: Boolean /* /root/Event/cachingUsed */ , val eventReferrer: String /* /root/Event/referrer */ ,
   val pageName: String /* /root/Event/pageName */ , val requestUri: String /* /root/Event/requestUri */ ,
   /* ******************************************** */
   /* User attributes and fields */
-  val user_ip: String /* /root/Event/user/ip */ , val user_userAgent: String /* /root/Event/user/userAgent */ ,
-  val user_robot: String /* /root/Event/user/robot */ , val user_location: String /* /root/Event/user/location */ ,
-  val user_browser: String /* /root/Event/user/browser */ ,
+  val userIP: String /* /root/Event/user/ip */ , val userAgent: String /* /root/Event/user/userAgent */ ,
+  val userIsRobot: Boolean /* /root/Event/user/robot */ , val userLocation: String /* /root/Event/user/location */ ,
+  val userBrowser: String /* /root/Event/user/browser */ ,
   /* ******************************************** */
   /* Search attributes and fields */
-  val search_searchId: String /* /root/Event/search/searchId */ ,
-  val search_what: String /* /root/Event/search/what */ , val search_where: String /* /root/Event/search/where */ ,
-  val search_resultCount: String /* /root/Event/search/resultCount */ ,
-  val search_resolvedWhat: String /* /root/Event/search/resolvedWhat */ ,
-  val search_disambiguationPopup: String /* /root/Event/search/disambiguationPopup */ ,
-  val search_dYMSuggestions: String /* /root/Event/search/dYMSuggestions */ ,
-  val search_failedOrSuccess: String /* /root/Event/search/failedOrSuccess */ ,
-  val search_hasRHSListings: String /* /root/Event/search/hasRHSListings */ ,
-  val search_hasNonAdRollupListings: String /* /root/Event/search/hasNonAdRollupListings */ ,
-  val search_calledBing: String /* /root/Event/search/calledBing */ , val search_geoORdir: String /* /root/Event/search/geoORdir */ ,
-  val search_listingsCategoriesTiersMainListsAuxLists_category_id: String /* /root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id */ ,
-  val search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_id: String /* /root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id */ ,
-  val search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_count: String /* /root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count */ ,
-  val search_matchedGeo_geo: String /* /root/Event/search/matchedGeo/geo */ ,
-  val search_matchedGeo_type: String /* /root/Event/search/matchedGeo/type */ ,
-  val search_matchedGeo_polygonIds: String /* /root/Event/search/matchedGeo/polygonIds */ ,
-  val search_allListingsTypesMainLists: String /* /root/Event/search/allListingsTypesMainLists */ ,
-  val search_directoriesReturned: String /* /root/Event/search/directoriesReturned */ ,
-  val search_allHeadings_heading_name: String /* /root/Event/search/allHeadings/heading/name */ ,
-  val search_allHeadings_heading_category: String /* /root/Event/search/allHeadings/heading/category */ ,
-  val search_type: String /* /root/Event/search/type */ , val search_resultPage: String /* /root/Event/search/resultPage */ ,
-  val search_resultPerPage: String /* /root/Event/search/resultPerPage */ , val search_latitude: String /* /root/Event/search/latitude */ ,
-  val search_longitude: String /* /root/Event/search/longitude */ ,
-  val search_merchants_attr_id: String /* /root/Event/search/merchants/@id */ ,
-  val search_merchants_attr_zone: String /* /root/Event/search/merchants/@zone */ ,
-  val search_merchants_attr_latitude: String /* /root/Event/search/merchants/@latitude */ ,
-  val search_merchants_attr_longitude: String, /* /root/Event/search/merchants/@longitude */
-  val search_merchants_attr_distance: String, /* /root/Event/search/merchants/@distance */
-  val search_merchants_RHSorLHS: String /* /root/Event/search/merchants/RHSorLHS */ ,
-  val search_merchants_isNonAdRollup: String /* /root/Event/search/merchants/isNonAdRollup */ ,
-  val search_merchants_ranking: String /* /root/Event/search/merchants/ranking */ ,
-  val search_merchants_isListingRelevant: String /* /root/Event/search/merchants/isListingRelevant */ ,
-  val search_merchants_entry_heading_attr_isRelevant: String /* /root/Event/search/merchants/entry/heading/@isRelevant */ ,
-  val search_merchants_entry_heading_categories: String /* /root/Event/search/merchants/entry/heading/categories */ ,
-  val search_merchants_entry_directories_channel1: String /* /root/Event/search/merchants/entry/directories/channel1 */ ,
-  val search_merchants_entry_directories_channel2: String /* /root/Event/search/merchants/entry/directories/channel2 */ ,
-  val search_merchants_entry_product_productType: String /* /root/Event/search/merchants/entry/product/productType */ ,
-  val search_merchants_entry_product_language: String /* /root/Event/search/merchants/entry/product/language */ ,
-  val search_merchants_entry_product_udac: String /* /root/Event/search/merchants/entry/product/udac */ ,
-  val search_merchants_entry_listingType: String /* /root/Event/search/merchants/entry/listingType */ ,
-  val search_searchAnalysis_fuzzy: String /* /root/Event/search/searchAnalysis/fuzzy */ ,
-  val search_searchAnalysis_geoExpanded: String /* /root/Event/search/searchAnalysis/geoExpanded */ ,
-  val search_searchAnalysis_businessName: String /* /root/Event/search/searchAnalysis/businessName*/ ,
+  val searchId: String /* /root/Event/search/searchId */ ,
+  val searchWhat: String /* /root/Event/search/what */ , val searchWhere: String /* /root/Event/search/where */ ,
+  val searchResultCount: String /* /root/Event/search/resultCount */ ,
+  val searchWhatResolved: String /* /root/Event/search/resolvedWhat */ ,
+  val searchIsDisambiguation: Boolean /* /root/Event/search/disambiguationPopup */ ,
+  val searchIsSuggestion: Boolean /* /root/Event/search/dYMSuggestions */ ,
+  val searchFailedOrSuccess: String /* /root/Event/search/failedOrSuccess */ ,
+  val searchHasRHSListings: Boolean /* /root/Event/search/hasRHSListings */ ,
+  val searchHasNonAdRollupListings: Boolean /* /root/Event/search/hasNonAdRollupListings */ ,
+  val searchIsCalledBing: Boolean /* /root/Event/search/calledBing */ , val searchGeoOrDir: String /* /root/Event/search/geoORdir */ ,
+  val categoryId: String /* /root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id */ ,
+  val tierId: String /* /root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id */ ,
+  val tierCount: Long /* /root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count */ ,
+  val searchGeoName: String /* /root/Event/search/matchedGeo/geo */ ,
+  val searchGeoType: String /* /root/Event/search/matchedGeo/type */ ,
+  val searchGeoPolygonIds: String /* /root/Event/search/matchedGeo/polygonIds */ ,
+  val tierUdacCountList: String /* /root/Event/search/allListingsTypesMainLists */ ,
+  val directoryIdList: String /* /root/Event/search/directoriesReturned */ ,
+  val headingId: Long /* /root/Event/search/allHeadings/heading/name */ ,
+  val headingRelevance: Char /* 'A' or 'B'*/ /* /root/Event/search/allHeadings/heading/category */ ,
+  val searchType: String /* /root/Event/search/type */ , val searchResultPage: String /* /root/Event/search/resultPage */ ,
+  val searchResultPerPage: String /* /root/Event/search/resultPerPage */ , val searchLatitude: String /* /root/Event/search/latitude */ ,
+  val searchLongitude: String /* /root/Event/search/longitude */ ,
   /* ******************************************** */
-  /* Search Analytics attributes and fields */
-  val searchAnalytics_entry_attr_key: String /* /root/Event/searchAnalytics/entry/@key */ ,
-  val searchAnalytics_entry_attr_value: String /* /root/Event/searchAnalytics/entry/@value */ ) extends Product with Serializable {
+  /* Merchants attributes and fields */
+  val merchantId: String /* /root/Event/search/merchants/@id */ ,
+  val merchantZone: String /* /root/Event/search/merchants/@zone */ ,
+  val merchantLatitude: String /* /root/Event/search/merchants/@latitude */ ,
+  val merchantLongitude: String, /* /root/Event/search/merchants/@longitude */
+  val merchantDistance: String, /* /root/Event/search/merchants/@distance */ // TODO: when merchants are de-normalized, this field should be Long
+  val merchantDisplayPosition: String /* /root/Event/search/merchants/RHSorLHS */ ,
+  val merchantIsNonAdRollup: String /* /root/Event/search/merchants/isNonAdRollup */ , // TODO: when merchants are de-normalized, this field should be Boolean
+  val merchantRank: String /* /root/Event/search/merchants/ranking */ , // TODO: when merchants are de-normalized, this field should be Int
+  val merchantIsRelevantListing: String /* /root/Event/search/merchants/isListingRelevant */ , // TODO: when merchants are de-normalized, this field should be Boolean
+  val merchantIsRelevantHeading: String /* /root/Event/search/merchants/entry/heading/@isRelevant */ , // TODO: when merchants are de-normalized, this field should be Boolean
+  val merchantHeadingIdList: String /* /root/Event/search/merchants/entry/heading/categories */ ,
+  val merchantChannel1List: String /* /root/Event/search/merchants/entry/directories/channel1 */ ,
+  val merchantChannel2List: String /* /root/Event/search/merchants/entry/directories/channel2 */ ,
+  val productType: String /* /root/Event/search/merchants/entry/product/productType */ ,
+  val productLanguage: String /* /root/Event/search/merchants/entry/product/language */ ,
+  val productUdac: String /* /root/Event/search/merchants/entry/product/udac */ ,
+  val merchantListingType: String /* /root/Event/search/merchants/entry/listingType */ ,
+  /* ******************************************** */
+  /* Search Analytics/Analysis attributes and fields */
+  val searchAnalysisIsfuzzy: Boolean /* /root/Event/search/searchAnalysis/fuzzy */ ,
+  val searchAnalysisIsGeoExpanded: Boolean /* /root/Event/search/searchAnalysis/geoExpanded */ ,
+  val searchAnalysisIsBusinessName: Boolean /* /root/Event/search/searchAnalysis/businessName*/ ,
+  val key: String /* /root/Event/searchAnalytics/entry/@key */ ,
+  val value: String /* /root/Event/searchAnalytics/entry/@value */ ) extends Product with Serializable {
   override def toString = {
     s"""
-         | attr_id (/root/Event/@id) = ${attr_id},
-         | attr_timestamp (/root/Event/@timestamp) = ${attr_timestamp},
-         | attr_site (/root/Event/@site) = ${attr_site},
-         | attr_siteLanguage (/root/Event/@siteLanguage) = ${attr_siteLanguage},
-         | attr_userId (/root/Event/@userId) = ${attr_userId},
-         | attr_apiKey (/root/Event/apiKey) = ${attr_apiKey},
-         | sessionId (/root/Event/sessionId) = ${sessionId},
+         | eventId (/root/Event/@id) = ${eventId},
+         | timestamp (/root/Event/@timestamp) = ${timestamp},
+         | eventSite (/root/Event/@site) = ${eventSite},
+         | eventSiteLanguage (/root/Event/@siteLanguage) = ${eventSiteLanguage},
+         | userId (/root/Event/@userId) = ${userId},
+         | apiKey (/root/Event/apiKey) = ${apiKey},
+         | userSessionId (/root/Event/sessionId) = ${userSessionId},
          | transactionDuration (/root/Event/transactionDuration) = ${transactionDuration},
-         | cachingUsed (/root/Event/cachingUsed) = ${cachingUsed},
-         | referrer (/root/Event/referrer) = ${referrer},
+         | isResultCached (/root/Event/cachingUsed) = ${isResultCached},
+         | eventReferrer (/root/Event/referrer) = ${eventReferrer},
          | pageName (/root/Event/pageName) = ${pageName},
          |  requestUri (/root/Event/requestUri) = ${requestUri},
-         |  user_ip (/root/Event/user/ip) = ${user_ip},
-         |  user_userAgent (/root/Event/user/userAgent) = ${user_userAgent},
-         |  user_robot (/root/Event/user/robot) = ${user_robot},
-         |  user_location (/root/Event/user/location) = ${user_location},
-         |  search_searchId (/root/Event/search/searchId) = ${search_searchId},
-         |  search_what (/root/Event/search/what) = ${search_what},
-         |  search_where (/root/Event/search/where) = ${search_where},
-         |  search_resultCount (/root/Event/search/resultCount) = ${search_resultCount},
-         |  search_resolvedWhat (/root/Event/search/resolvedWhat) = ${search_resolvedWhat},
-         |  search_disambiguationPopup (/root/Event/search/disambiguationPopup) = ${search_disambiguationPopup},
-         |  search_dYMSuggestions (/root/Event/search/dYMSuggestions) = ${search_dYMSuggestions},
-         |  search_failedOrSuccess (/root/Event/search/failedOrSuccess) = ${search_failedOrSuccess},
-         |  search_hasRHSListings (/root/Event/search/hasRHSListings) = ${search_hasRHSListings},
-         | search_hasNonAdRollupListings (/root/Event/search/hasNonAdRollupListings) = ${search_hasNonAdRollupListings},
-         | search_calledBing (/root/Event/search/calledBing) = ${search_calledBing},
-         | search_geoORdir (/root/Event/search/geoORdir) = ${search_geoORdir},
-         | search_listingsCategoriesTiersMainListsAuxLists_category_id (/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id) = ${search_listingsCategoriesTiersMainListsAuxLists_category_id},
-         | search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_id (/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id) = ${search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_id},
-         | search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_count (/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count) = ${search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_count},
-         | search_matchedGeo_geo (/root/Event/search/matchedGeo/geo) = ${search_matchedGeo_geo},
-         | search_matchedGeo_type (/root/Event/search/matchedGeo/type) = ${search_matchedGeo_type},
-         | search_matchedGeo_polygonIds (/root/Event/search/matchedGeo/polygonIds) = ${search_matchedGeo_polygonIds},
-         | search_allListingsTypesMainLists (/root/Event/search/allListingsTypesMainLists) = ${search_allListingsTypesMainLists},
-         | search_directoriesReturned (/root/Event/search/directoriesReturned) = ${search_directoriesReturned},
-         | search_allHeadings_heading_name (/root/Event/search/allHeadings/heading/name) = ${search_allHeadings_heading_name},
-         | search_allHeadings_heading_category (/root/Event/search/allHeadings/heading/category) = ${search_allHeadings_heading_category},
-         | search_type (/root/Event/search/type) = ${search_type},
-         | search_resultPage (/root/Event/search/resultPage) = ${search_resultPage},
-         | search_resultPerPage (/root/Event/search/resultPerPage) = ${search_resultPerPage},
-         | search_latitude (/root/Event/search/latitude) = ${search_latitude},
-         | search_longitude (/root/Event/search/longitude) = ${search_longitude},
-         | search_merchants_attr_id (/root/Event/search/merchants/@id) = ${search_merchants_attr_id},
-         | search_merchants_attr_zone (/root/Event/search/merchants/@zone) = ${search_merchants_attr_zone},
-         | search_merchants_attr_latitude (/root/Event/search/merchants/@latitude) = ${search_merchants_attr_latitude},
-         | search_merchants_attr_longitude (/root/Event/search/merchants/@longitude) = ${search_merchants_attr_longitude},
-         | search_merchants_attr_distance (/root/Event/search/merchants/@distance) = ${search_merchants_attr_distance},
-         | search_merchants_RHSorLHS (/root/Event/search/merchants/RHSorLHS) = ${search_merchants_RHSorLHS},
-         | search_merchants_isNonAdRollup (/root/Event/search/merchants/isNonAdRollup) = ${search_merchants_isNonAdRollup},
-         | search_merchants_ranking (/root/Event/search/merchants/ranking) = ${search_merchants_ranking},
-         | search_merchants_isListingRelevant (/root/Event/search/merchants/isListingRelevant) = ${search_merchants_isListingRelevant},
-         | search_merchants_entry_heading_attr_isRelevant (/root/Event/search/merchants/entry/heading/@isRelevant) = ${search_merchants_entry_heading_attr_isRelevant},
-         | search_merchants_entry_heading_categories (/root/Event/search/merchants/entry/heading/categories) = ${search_merchants_entry_heading_categories},
-         | search_merchants_entry_directories_channel1 (/root/Event/search/merchants/entry/directories/channel1) = ${search_merchants_entry_directories_channel1},
-         | search_merchants_entry_directories_channel2 (/root/Event/search/merchants/entry/directories/channel2) = ${search_merchants_entry_directories_channel2},
-         | search_merchants_entry_product_productType (/root/Event/search/merchants/entry/product/productType) = ${search_merchants_entry_product_productType},
-         | search_merchants_entry_product_language (/root/Event/search/merchants/entry/product/language) = ${search_merchants_entry_product_language},
-         | search_merchants_entry_product_udac (/root/Event/search/merchants/entry/product/udac) = ${search_merchants_entry_product_udac},
-         | search_merchants_entry_listingType (/root/Event/search/merchants/entry/listingType) = ${search_merchants_entry_listingType},
-         | search_searchAnalysis_fuzzy (/root/Event/search/searchAnalysis/fuzzy) = ${search_searchAnalysis_fuzzy},
-         | search_searchAnalysis_geoExpanded (/root/Event/search/searchAnalysis/geoExpanded) = ${search_searchAnalysis_geoExpanded},
-         | search_searchAnalysis_businessName (/root/Event/search/searchAnalysis/businessName") = ${search_searchAnalysis_businessName},
-         | searchAnalytics_entry_attr_key (/root/Event/searchAnalytics/entry/@key) = ${searchAnalytics_entry_attr_key},
-         | searchAnalytics_entry_attr_value (/root/Event/searchAnalytics/entry/@value) = ${searchAnalytics_entry_attr_value}
+         |  userIP (/root/Event/user/ip) = ${userIP},
+         |  userAgent (/root/Event/user/userAgent) = ${userAgent},
+         |  userIsRobot (/root/Event/user/robot) = ${userIsRobot},
+         |  userLocation (/root/Event/user/location) = ${userLocation},
+         |  userBrowser (/root/Event/user/browser) = ${userBrowser},
+         |  searchId (/root/Event/search/searchId) = ${searchId},
+         |  searchWhat (/root/Event/search/what) = ${searchWhat},
+         |  searchWhere (/root/Event/search/where) = ${searchWhere},
+         |  searchResultCount (/root/Event/search/resultCount) = ${searchResultCount},
+         |  searchWhatResolved (/root/Event/search/resolvedWhat) = ${searchWhatResolved},
+         |  searchIsDisambiguation (/root/Event/search/disambiguationPopup) = ${searchIsDisambiguation},
+         |  searchIsSuggestion (/root/Event/search/dYMSuggestions) = ${searchIsSuggestion},
+         |  searchFailedOrSuccess (/root/Event/search/failedOrSuccess) = ${searchFailedOrSuccess},
+         |  searchHasRHSListings (/root/Event/search/hasRHSListings) = ${searchHasRHSListings},
+         | searchHasNonAdRollupListings (/root/Event/search/hasNonAdRollupListings) = ${searchHasNonAdRollupListings},
+         | searchIsCalledBing (/root/Event/search/calledBing) = ${searchIsCalledBing},
+         | searchGeoOrDir (/root/Event/search/geoORdir) = ${searchGeoOrDir},
+         | categoryId (/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id) = ${categoryId},
+         | tierId (/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id) = ${tierId},
+         | tierCount (/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count) = ${tierCount},
+         | searchGeoName (/root/Event/search/matchedGeo/geo) = ${searchGeoName},
+         | searchGeoType (/root/Event/search/matchedGeo/type) = ${searchGeoType},
+         | searchGeoPolygonIds (/root/Event/search/matchedGeo/polygonIds) = ${searchGeoPolygonIds},
+         | tierUdacCountList (/root/Event/search/allListingsTypesMainLists) = ${tierUdacCountList},
+         | directoryIdList (/root/Event/search/directoriesReturned) = ${directoryIdList},
+         | headingId (/root/Event/search/allHeadings/heading/name) = ${headingId},
+         | headingRelevance (/root/Event/search/allHeadings/heading/category) = ${headingRelevance},
+         | searchType (/root/Event/search/type) = ${searchType},
+         | searchResultPage (/root/Event/search/resultPage) = ${searchResultPage},
+         | searchResultPerPage (/root/Event/search/resultPerPage) = ${searchResultPerPage},
+         | searchLatitude (/root/Event/search/latitude) = ${searchLatitude},
+         | searchLongitude (/root/Event/search/longitude) = ${searchLongitude},
+         | merchantId (/root/Event/search/merchants/@id) = ${merchantId},
+         | merchantZone (/root/Event/search/merchants/@zone) = ${merchantZone},
+         | merchantLatitude (/root/Event/search/merchants/@latitude) = ${merchantLatitude},
+         | merchantLongitude (/root/Event/search/merchants/@longitude) = ${merchantLongitude},
+         | merchantDistance (/root/Event/search/merchants/@distance) = ${merchantDistance},
+         | merchantDisplayPosition (/root/Event/search/merchants/RHSorLHS) = ${merchantDisplayPosition},
+         | merchantIsNonAdRollup (/root/Event/search/merchants/isNonAdRollup) = ${merchantIsNonAdRollup},
+         | merchantRank (/root/Event/search/merchants/ranking) = ${merchantRank},
+         | merchantIsRelevantListing (/root/Event/search/merchants/isListingRelevant) = ${merchantIsRelevantListing},
+         | merchantIsRelevantHeading (/root/Event/search/merchants/entry/heading/@isRelevant) = ${merchantIsRelevantHeading},
+         | merchantHeadingIdList (/root/Event/search/merchants/entry/heading/categories) = ${merchantHeadingIdList},
+         | merchantChannel1List (/root/Event/search/merchants/entry/directories/channel1) = ${merchantChannel1List},
+         | merchantChannel2List (/root/Event/search/merchants/entry/directories/channel2) = ${merchantChannel2List},
+         | productType (/root/Event/search/merchants/entry/product/productType) = ${productType},
+         | productLanguage (/root/Event/search/merchants/entry/product/language) = ${productLanguage},
+         | productUdac (/root/Event/search/merchants/entry/product/udac) = ${productUdac},
+         | merchantListingType (/root/Event/search/merchants/entry/listingType) = ${merchantListingType},
+         | searchAnalysisIsfuzzy (/root/Event/search/searchAnalysis/fuzzy) = ${searchAnalysisIsfuzzy},
+         | searchAnalysisIsGeoExpanded (/root/Event/search/searchAnalysis/geoExpanded) = ${searchAnalysisIsGeoExpanded},
+         | searchAnalysisIsBusinessName (/root/Event/search/searchAnalysis/businessName") = ${searchAnalysisIsBusinessName},
+         | key (/root/Event/searchAnalytics/entry/@key) = ${key},
+         | value (/root/Event/searchAnalytics/entry/@value) = ${value}
          """.stripMargin
   }
 
@@ -151,158 +154,216 @@ class eventDetail(
 
   @throws(classOf[IndexOutOfBoundsException])
   override def productElement(n: Int) = n match {
-    case 0 => attr_id
-    case 1 => attr_timestamp
-    case 2 => attr_site
-    case 3 => attr_siteLanguage
-    case 4 => attr_userId
-    case 5 => attr_apiKey
-    case 6 => sessionId
+    case 0 => eventId
+    case 1 => timestamp
+    case 2 => eventSite
+    case 3 => eventSiteLanguage
+    case 4 => userId
+    case 5 => apiKey
+    case 6 => userSessionId
     case 7 => transactionDuration
-    case 8 => cachingUsed
-    case 9 => referrer
+    case 8 => isResultCached
+    case 9 => eventReferrer
     case 10 => pageName
     case 11 => requestUri
-    case 12 => user_ip
-    case 13 => user_userAgent
-    case 14 => user_robot
-    case 15 => user_location
-    case 16 => user_browser
-    case 17 => search_searchId
-    case 18 => search_what
-    case 19 => search_where
-    case 20 => search_resultCount
-    case 21 => search_resolvedWhat
-    case 22 => search_disambiguationPopup
-    case 23 => search_dYMSuggestions
-    case 24 => search_failedOrSuccess
-    case 25 => search_hasRHSListings
-    case 26 => search_hasNonAdRollupListings
-    case 27 => search_calledBing
-    case 28 => search_geoORdir
-    case 29 => search_listingsCategoriesTiersMainListsAuxLists_category_id
-    case 30 => search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_id
-    case 31 => search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_count
-    case 32 => search_matchedGeo_geo
-    case 33 => search_matchedGeo_type
-    case 34 => search_matchedGeo_polygonIds
-    case 35 => search_allListingsTypesMainLists
-    case 36 => search_directoriesReturned
-    case 37 => search_allHeadings_heading_name
-    case 38 => search_allHeadings_heading_category
-    case 39 => search_type
-    case 40 => search_resultPage
-    case 41 => search_resultPerPage
-    case 42 => search_latitude
-    case 43 => search_longitude
-    case 44 => search_merchants_attr_id
-    case 45 => search_merchants_attr_zone
-    case 46 => search_merchants_attr_latitude
-    case 47 => search_merchants_attr_longitude
-    case 48 => search_merchants_attr_distance
-    case 49 => search_merchants_RHSorLHS
-    case 50 => search_merchants_isNonAdRollup
-    case 51 => search_merchants_ranking
-    case 52 => search_merchants_isListingRelevant
-    case 53 => search_merchants_entry_heading_attr_isRelevant
-    case 54 => search_merchants_entry_heading_categories
-    case 55 => search_merchants_entry_directories_channel1
-    case 56 => search_merchants_entry_directories_channel2
-    case 57 => search_merchants_entry_product_productType
-    case 58 => search_merchants_entry_product_language
-    case 59 => search_merchants_entry_product_udac
-    case 60 => search_merchants_entry_listingType
-    case 61 => search_searchAnalysis_fuzzy
-    case 62 => search_searchAnalysis_geoExpanded
-    case 63 => search_searchAnalysis_businessName
-    case 64 => searchAnalytics_entry_attr_key
-    case 65 => searchAnalytics_entry_attr_value
+    case 12 => userIP
+    case 13 => userAgent
+    case 14 => userIsRobot
+    case 15 => userLocation
+    case 16 => userBrowser
+    case 17 => searchId
+    case 18 => searchWhat
+    case 19 => searchWhere
+    case 20 => searchResultCount
+    case 21 => searchWhatResolved
+    case 22 => searchIsDisambiguation
+    case 23 => searchIsSuggestion
+    case 24 => searchFailedOrSuccess
+    case 25 => searchHasRHSListings
+    case 26 => searchHasNonAdRollupListings
+    case 27 => searchIsCalledBing
+    case 28 => searchGeoOrDir
+    case 29 => categoryId
+    case 30 => tierId
+    case 31 => tierCount
+    case 32 => searchGeoName
+    case 33 => searchGeoType
+    case 34 => searchGeoPolygonIds
+    case 35 => tierUdacCountList
+    case 36 => directoryIdList
+    case 37 => headingId
+    case 38 => headingRelevance
+    case 39 => searchType
+    case 40 => searchResultPage
+    case 41 => searchResultPerPage
+    case 42 => searchLatitude
+    case 43 => searchLongitude
+    case 44 => merchantId
+    case 45 => merchantZone
+    case 46 => merchantLatitude
+    case 47 => merchantLongitude
+    case 48 => merchantDistance
+    case 49 => merchantDisplayPosition
+    case 50 => merchantIsNonAdRollup
+    case 51 => merchantRank
+    case 52 => merchantIsRelevantListing
+    case 53 => merchantIsRelevantHeading
+    case 54 => merchantHeadingIdList
+    case 55 => merchantChannel1List
+    case 56 => merchantChannel2List
+    case 57 => productType
+    case 58 => productLanguage
+    case 59 => productUdac
+    case 60 => merchantListingType
+    case 61 => searchAnalysisIsfuzzy
+    case 62 => searchAnalysisIsGeoExpanded
+    case 63 => searchAnalysisIsBusinessName
+    case 64 => key
+    case 65 => value
     case _ => throw new IndexOutOfBoundsException(n.toString())
   }
 
 }
 
 object eventDetail {
+
+  def runOrDefault[A, B](f: A => B)(default: B)(param: A): B = {
+    try {
+      f(param)
+    } catch {
+      case e: Exception =>
+        default
+    }
+  }
+
+  def list2String(l: List[String]): String = {
+    l.length match {
+      case 0 => ""
+      case 1 => l.head
+      case _ => l.mkString(start = "{", sep = ",", end = "}")
+    }
+  }
+
   /**
    * TODO
    * @param aMap
    * @return
    */
   def apply(aMap: Map[String, List[String]]): List[eventDetail] = {
-    def list2String(l: List[String]): String = {
-      l.length match {
-        case 0 => ""
-        case 1 => l.head
-        case _ => l.mkString(start = "{", sep = ",", end = "}")
+    def getOrEmpty(fieldName: String): String = {
+      list2String(aMap.getOrElse(fieldName, List.empty))
+    }
+    def displayTypeError(fieldNameInMap: String, dstType: String, resultFieldName: String): Unit = {
+      val fieldValue = {
+        val v = getOrEmpty(fieldNameInMap)
+        if (v.isEmpty) "empty"
+        else s"'${v}'"
       }
+      // TODO: use 'logger'
+      println(s"Field '${resultFieldName}' is supposed to be '${dstType}', but '${fieldNameInMap}' is ${fieldValue}")
+    }
+    // Boolean specifics:
+    def parseAsBoolean(fieldName: String): Option[Boolean] = {
+      getOrEmpty(fieldName).trim.toUpperCase match {
+        case "TRUE" | "1" | "T" | "TRUE" | "Y" | "YES" => Some(true)
+        case "FALSE" | "0" | "F" | "FALSE" | "N" | "NO" => Some(false)
+        case x if (x.isEmpty) => Some(false) // TODO: if field not there, assuming false. Is this correct?
+        case _ => None
+      }
+    }
+    def displayBooleanError(fieldNameInMap: String, resultFieldName: String): Unit = {
+      displayTypeError(fieldNameInMap, dstType = "Boolean", resultFieldName)
+    }
+    def parseAsBooleanOrFalse(fieldNameInMap: String, resultFieldName: String): Boolean = {
+      parseAsBoolean(fieldNameInMap).getOrElse { displayBooleanError(fieldNameInMap, resultFieldName); false }
+    }
+    // Long specifics:
+    def parseAsLong(fieldName: String): Option[Long] = {
+      getOrEmpty(fieldName) match {
+        case s if s.isEmpty => Some(0L) // TODO: if field not there, assuming 0L. Is this correct?
+        case s => catching(classOf[Exception]) opt { s.toLong }
+      }
+    }
+    def displayLongError(fieldNameInMap: String, resultFieldName: String): Unit = {
+      displayTypeError(fieldNameInMap, dstType = "Long", resultFieldName)
+    }
+    def parseAsLongOrDefault(fieldNameInMap: String, resultFieldName: String): Long = {
+      parseAsLong(fieldNameInMap).getOrElse { displayLongError(fieldNameInMap, resultFieldName); Long.MinValue }
     }
     val headingsWithCats = aMap.getOrElse("/root/Event/search/allHeadings/heading/name", List("")) zip aMap.getOrElse("/root/Event/search/allHeadings/heading/category", List(""))
     headingsWithCats.foldLeft(List.empty[eventDetail]) {
       case (listOfEvents, (aHeading, itsCategory)) =>
         new eventDetail(
-          search_allHeadings_heading_name = aHeading,
-          search_allHeadings_heading_category = itsCategory,
-          attr_id = list2String(aMap.getOrElse("/root/Event/@id", List.empty)),
-          attr_timestamp = list2String(aMap.getOrElse("/root/Event/@timestamp", List.empty)),
-          attr_site = list2String(aMap.getOrElse("/root/Event/@site", List.empty)),
-          attr_siteLanguage = list2String(aMap.getOrElse("/root/Event/@siteLanguage", List.empty)),
-          attr_userId = list2String(aMap.getOrElse("/root/Event/@userId", List.empty)),
-          attr_apiKey = list2String(aMap.getOrElse("/root/Event/apiKey", List.empty)), sessionId = list2String(aMap.getOrElse("/root/Event/sessionId", List.empty)),
-          transactionDuration = list2String(aMap.getOrElse("/root/Event/transactionDuration", List.empty)),
-          cachingUsed = list2String(aMap.getOrElse("/root/Event/cachingUsed", List.empty)), referrer = list2String(aMap.getOrElse("/root/Event/referrer", List.empty)),
-          pageName = list2String(aMap.getOrElse("/root/Event/pageName", List.empty)), requestUri = list2String(aMap.getOrElse("/root/Event/requestUri", List.empty)),
+          headingId = runOrDefault[String, Long] { _.toLong }(-1L)(aHeading),
+          headingRelevance = runOrDefault[String, Char] { s => s.charAt(0) }('X')(itsCategory),
+          eventId = getOrEmpty("/root/Event/@id"),
+          timestamp = getOrEmpty("/root/Event/@timestamp"),
+          eventSite = getOrEmpty("/root/Event/@site"),
+          eventSiteLanguage = getOrEmpty("/root/Event/@siteLanguage"),
+          userId = getOrEmpty("/root/Event/@userId"),
+          apiKey = getOrEmpty("/root/Event/apiKey"),
+          userSessionId = getOrEmpty("/root/Event/sessionId"),
+          transactionDuration = runOrDefault[String, Long] { _.toLong }(-1)(getOrEmpty("/root/Event/transactionDuration")),
+          isResultCached = parseAsBooleanOrFalse("/root/Event/cachingUsed", "isResultCached"),
+          eventReferrer = getOrEmpty("/root/Event/referrer"),
+          pageName = getOrEmpty("/root/Event/pageName"),
+          requestUri = getOrEmpty("/root/Event/requestUri"),
           /* ******************************************** */
           /* User attributes and fields */
-          user_ip = list2String(aMap.getOrElse("/root/Event/user/ip", List.empty)), user_userAgent = list2String(aMap.getOrElse("/root/Event/user/userAgent", List.empty)),
-          user_robot = list2String(aMap.getOrElse("/root/Event/user/robot", List.empty)), user_location = list2String(aMap.getOrElse("/root/Event/user/location", List.empty)),
-          user_browser = list2String(aMap.getOrElse("/root/Event/user/browser", List.empty)),
+          userIP = getOrEmpty("/root/Event/user/ip"),
+          userAgent = getOrEmpty("/root/Event/user/userAgent"),
+          userIsRobot = parseAsBooleanOrFalse("/root/Event/user/robot", "userIsRobot"),
+          userLocation = getOrEmpty("/root/Event/user/location"),
+          userBrowser = getOrEmpty("/root/Event/user/browser"),
           /* ******************************************** */
           /* Search attributes and fields */
-          search_searchId = list2String(aMap.getOrElse("/root/Event/search/searchId", List.empty)),
-          search_what = list2String(aMap.getOrElse("/root/Event/search/what", List.empty)), search_where = list2String(aMap.getOrElse("/root/Event/search/where", List.empty)),
-          search_resultCount = list2String(aMap.getOrElse("/root/Event/search/resultCount", List.empty)),
-          search_resolvedWhat = list2String(aMap.getOrElse("/root/Event/search/resolvedWhat", List.empty)),
-          search_disambiguationPopup = list2String(aMap.getOrElse("/root/Event/search/disambiguationPopup", List.empty)),
-          search_dYMSuggestions = list2String(aMap.getOrElse("/root/Event/search/dYMSuggestions", List.empty)),
-          search_failedOrSuccess = list2String(aMap.getOrElse("/root/Event/search/failedOrSuccess", List.empty)),
-          search_hasRHSListings = list2String(aMap.getOrElse("/root/Event/search/hasRHSListings", List.empty)),
-          search_hasNonAdRollupListings = list2String(aMap.getOrElse("/root/Event/search/hasNonAdRollupListings", List.empty)),
-          search_calledBing = list2String(aMap.getOrElse("/root/Event/search/calledBing", List.empty)), search_geoORdir = list2String(aMap.getOrElse("/root/Event/search/geoORdir", List.empty)),
-          search_listingsCategoriesTiersMainListsAuxLists_category_id = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id", List.empty)),
-          search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_id = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id", List.empty)),
-          search_listingsCategoriesTiersMainListsAuxLists_category_id_tier_count = list2String(aMap.getOrElse("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count", List.empty)),
-          search_matchedGeo_geo = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/geo", List.empty)),
-          search_matchedGeo_type = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/type", List.empty)),
-          search_matchedGeo_polygonIds = list2String(aMap.getOrElse("/root/Event/search/matchedGeo/polygonIds", List.empty)),
-          search_allListingsTypesMainLists = list2String(aMap.getOrElse("/root/Event/search/allListingsTypesMainLists", List.empty)),
-          search_directoriesReturned = list2String(aMap.getOrElse("/root/Event/search/directoriesReturned", List.empty)),
-          search_type = list2String(aMap.getOrElse("/root/Event/search/type", List.empty)), search_resultPage = list2String(aMap.getOrElse("/root/Event/search/resultPage", List.empty)),
-          search_resultPerPage = list2String(aMap.getOrElse("/root/Event/search/resultPerPage", List.empty)), search_latitude = list2String(aMap.getOrElse("/root/Event/search/latitude", List.empty)),
-          search_longitude = list2String(aMap.getOrElse("/root/Event/search/longitude", List.empty)),
-          search_merchants_attr_id = list2String(aMap.getOrElse("/root/Event/search/merchants/@id", List.empty)),
-          search_merchants_attr_zone = list2String(aMap.getOrElse("/root/Event/search/merchants/@zone", List.empty)),
-          search_merchants_attr_latitude = list2String(aMap.getOrElse("/root/Event/search/merchants/@latitude", List.empty)),
-          search_merchants_attr_longitude = list2String(aMap.getOrElse("/root/Event/search/merchants/@longitude", List.empty)),
-          search_merchants_attr_distance = list2String(aMap.getOrElse("/root/Event/search/merchants/@distance", List.empty)),
-          search_merchants_RHSorLHS = list2String(aMap.getOrElse("/root/Event/search/merchants/RHSorLHS", List.empty)),
-          search_merchants_isNonAdRollup = list2String(aMap.getOrElse("/root/Event/search/merchants/isNonAdRollup", List.empty)),
-          search_merchants_ranking = list2String(aMap.getOrElse("/root/Event/search/merchants/ranking", List.empty)),
-          search_merchants_isListingRelevant = list2String(aMap.getOrElse("/root/Event/search/merchants/isListingRelevant", List.empty)),
-          search_merchants_entry_heading_attr_isRelevant = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/heading/@isRelevant", List.empty)),
-          search_merchants_entry_heading_categories = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/heading/categories", List.empty)),
-          search_merchants_entry_directories_channel1 = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/directories/channel1", List.empty)),
-          search_merchants_entry_directories_channel2 = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/directories/channel2", List.empty)),
-          search_merchants_entry_product_productType = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/productType", List.empty)),
-          search_merchants_entry_product_language = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/language", List.empty)),
-          search_merchants_entry_product_udac = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/product/udac", List.empty)),
-          search_merchants_entry_listingType = list2String(aMap.getOrElse("/root/Event/search/merchants/entry/listingType", List.empty)),
-          search_searchAnalysis_fuzzy = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/fuzzy", List.empty)),
-          search_searchAnalysis_geoExpanded = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/geoExpanded", List.empty)),
-          search_searchAnalysis_businessName = list2String(aMap.getOrElse("/root/Event/search/searchAnalysis/businessName", List.empty)),
+          searchId = getOrEmpty("/root/Event/search/searchId"),
+          searchWhat = getOrEmpty("/root/Event/search/what"),
+          searchWhere = getOrEmpty("/root/Event/search/where"),
+          searchResultCount = getOrEmpty("/root/Event/search/resultCount"),
+          searchWhatResolved = getOrEmpty("/root/Event/search/resolvedWhat"),
+          searchIsDisambiguation = parseAsBooleanOrFalse("/root/Event/search/disambiguationPopup", "searchIsDisambiguation"),
+          searchIsSuggestion = parseAsBooleanOrFalse("/root/Event/search/dYMSuggestions", "searchIsSuggestion"),
+          searchFailedOrSuccess = getOrEmpty("/root/Event/search/failedOrSuccess"),
+          searchHasRHSListings = parseAsBooleanOrFalse("/root/Event/search/hasRHSListings", "searchHasRHSListings"),
+          searchHasNonAdRollupListings = parseAsBooleanOrFalse("/root/Event/search/hasNonAdRollupListings", "searchHasNonAdRollupListings"),
+          searchIsCalledBing = parseAsBooleanOrFalse("/root/Event/search/calledBing", "searchIsCalledBing"),
+          searchGeoOrDir = getOrEmpty("/root/Event/search/geoORdir"),
+          categoryId = getOrEmpty("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id"),
+          tierId = getOrEmpty("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/id"),
+          tierCount = parseAsLongOrDefault("/root/Event/search/listingsCategoriesTiersMainListsAuxLists/category/id/tier/count", "tierCount"),
+          searchGeoName = getOrEmpty("/root/Event/search/matchedGeo/geo"),
+          searchGeoType = getOrEmpty("/root/Event/search/matchedGeo/type"),
+          searchGeoPolygonIds = getOrEmpty("/root/Event/search/matchedGeo/polygonIds"),
+          tierUdacCountList = getOrEmpty("/root/Event/search/allListingsTypesMainLists"),
+          directoryIdList = getOrEmpty("/root/Event/search/directoriesReturned"),
+          searchType = getOrEmpty("/root/Event/search/type"), searchResultPage = getOrEmpty("/root/Event/search/resultPage"),
+          searchResultPerPage = list2String(aMap.getOrElse("/root/Event/search/resultPerPage", List.empty)), searchLatitude = getOrEmpty("/root/Event/search/latitude"),
+          searchLongitude = getOrEmpty("/root/Event/search/longitude"),
+          merchantId = getOrEmpty("/root/Event/search/merchants/@id"),
+          merchantZone = getOrEmpty("/root/Event/search/merchants/@zone"),
+          merchantLatitude = getOrEmpty("/root/Event/search/merchants/@latitude"),
+          merchantLongitude = getOrEmpty("/root/Event/search/merchants/@longitude"),
+          merchantDistance = getOrEmpty("/root/Event/search/merchants/@distance"),
+          merchantDisplayPosition = getOrEmpty("/root/Event/search/merchants/RHSorLHS"),
+          merchantIsNonAdRollup = getOrEmpty("/root/Event/search/merchants/isNonAdRollup"),
+          merchantRank = getOrEmpty("/root/Event/search/merchants/ranking"),
+          merchantIsRelevantListing = getOrEmpty("/root/Event/search/merchants/isListingRelevant"),
+          merchantIsRelevantHeading = getOrEmpty("/root/Event/search/merchants/entry/heading/@isRelevant"),
+          merchantHeadingIdList = getOrEmpty("/root/Event/search/merchants/entry/heading/categories"),
+          merchantChannel1List = getOrEmpty("/root/Event/search/merchants/entry/directories/channel1"),
+          merchantChannel2List = getOrEmpty("/root/Event/search/merchants/entry/directories/channel2"),
+          productType = getOrEmpty("/root/Event/search/merchants/entry/product/productType"),
+          productLanguage = getOrEmpty("/root/Event/search/merchants/entry/product/language"),
+          productUdac = getOrEmpty("/root/Event/search/merchants/entry/product/udac"),
+          merchantListingType = getOrEmpty("/root/Event/search/merchants/entry/listingType"),
+          searchAnalysisIsfuzzy = parseAsBooleanOrFalse("/root/Event/search/searchAnalysis/fuzzy", "searchAnalysisIsfuzzy"),
+          searchAnalysisIsGeoExpanded = parseAsBooleanOrFalse("/root/Event/search/searchAnalysis/geoExpanded", "searchAnalysisIsGeoExpanded"),
+          searchAnalysisIsBusinessName = parseAsBooleanOrFalse("/root/Event/search/searchAnalysis/businessName", "searchAnalysisIsBusinessName"),
           /* ******************************************** */
           /* Search Analytics attributes and fields */
-          searchAnalytics_entry_attr_key = list2String(aMap.getOrElse("/root/Event/searchAnalytics/entry/@key", List.empty)),
-          searchAnalytics_entry_attr_value = list2String(aMap.getOrElse("/root/Event/searchAnalytics/entry/@value", List.empty))) :: listOfEvents
+          key = getOrEmpty("/root/Event/searchAnalytics/entry/@key"),
+          value = getOrEmpty("/root/Event/searchAnalytics/entry/@value")) :: listOfEvents
     }
 
   }
