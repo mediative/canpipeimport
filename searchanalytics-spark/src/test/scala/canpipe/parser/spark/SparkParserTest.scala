@@ -52,13 +52,31 @@ class SparkParserTest extends FlatSpec with BeforeAndAfter {
         val hdfsFileName = resourceFileName2HDFSFileName(fileInfo.name)
         val r = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
         val eventsInRDD = r.count()
-        withClue(s"Result is empty ") { assert(eventsInRDD > 0) }
         val setOfEvents = myBasicParser.parseFromResources(fileInfo.name)
+        withClue(s"Result is empty ") { assert(eventsInRDD > 0) }
         val howManyExpectedInRDD =
           setOfEvents.foldLeft(0L) { (count, resultForAnEvent) =>
             count + resultForAnEvent.get("/root/Event/search/allHeadings/heading/name").getOrElse(List("")).length
           }
         withClue(s"Expected ${howManyExpectedInRDD}, found ${eventsInRDD}") { assert(eventsInRDD == howManyExpectedInRDD) }
+    }
+
+    sc.stop()
+    System.clearProperty("spark.master.port")
+  }
+
+  it should "not have important fields left empty" in {
+    val testName = "my test 2"
+    val sc = new SparkContext("local[4]", testName)
+    val myParser = new SparkParser()
+
+    resourceFileNamesAndNumberOfEvents.foreach {
+      case (fileInfo, _) =>
+        info(s"Testing ${fileInfo.name}")
+        val hdfsFileName = resourceFileName2HDFSFileName(fileInfo.name)
+        val r = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
+        val eventsWithEmptyId = r.filter(_.eventId.isEmpty).collect().length
+        withClue(s"${eventsWithEmptyId} have empty 'eventId'") { assert(eventsWithEmptyId == 0) }
     }
 
     sc.stop()

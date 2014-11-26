@@ -278,7 +278,8 @@ object Base {
         }
       optResult.map {
         case (theEventId, theResultMap) =>
-          loop(theEventId, startXPath, resultMap = theResultMap)
+          val resultMap = loop(theEventId, startXPath, resultMap = theResultMap)
+          resultMap + ("/root/Event/@id" -> List(theEventId)) // just in case the id did not get into the map. TODO: can it get uglier than this?
       }.getOrElse((Map.empty[String, List[String]]))
     }
 
