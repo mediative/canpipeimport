@@ -12,7 +12,7 @@ class eventDetail(
   /* ******************************************** */
   /* Main event attributes and fields */
   val eventId: String, /* /root/Event/@id */
-  val timestamp: String, /* /root/Event/@timestamp */
+  val eventTimestamp: String, /* /root/Event/@timestamp */
   val timestampId: Long, /* FK to Time table */
   val eventSite: String, /* /root/Event/@site */
   val eventSiteLanguage: String, /* /root/Event/@siteLanguage */
@@ -81,7 +81,7 @@ class eventDetail(
   override def toString = {
     s"""
          | eventId (/root/Event/@id) = ${eventId},
-         | timestamp (/root/Event/@timestamp) = ${timestamp},
+         | eventTimestamp (/root/Event/@timestamp) = ${eventTimestamp},
          | eventSite (/root/Event/@site) = ${eventSite},
          | eventSiteLanguage (/root/Event/@siteLanguage) = ${eventSiteLanguage},
          | userId (/root/Event/@userId) = ${userId},
@@ -156,7 +156,7 @@ class eventDetail(
   @throws(classOf[IndexOutOfBoundsException])
   override def productElement(n: Int) = n match {
     case 0 => eventId
-    case 1 => timestamp
+    case 1 => eventTimestamp
     case 2 => timestampId
     case 3 => eventSite
     case 4 => eventSiteLanguage
@@ -337,7 +337,7 @@ object eventDetail {
           headingId = runOrDefault[String, Long] { _.toLong }(-1L)(aHeading),
           headingRelevance = itsCategory,
           eventId = getOrEmpty("/root/Event/@id"),
-          timestamp = getOrEmpty("/root/Event/@timestamp"),
+          eventTimestamp = getOrEmpty("/root/Event/@timestamp"),
           timestampId = parseAsLongOrDefault("/root/Event/timestampId", "timestampId"),
           eventSite = getOrEmpty("/root/Event/@site"),
           eventSiteLanguage = getOrEmpty("/root/Event/@siteLanguage"),
