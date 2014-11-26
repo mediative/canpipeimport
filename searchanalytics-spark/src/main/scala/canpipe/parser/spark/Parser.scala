@@ -2,7 +2,6 @@ package canpipe.parser.spark
 
 import canpipe.parser.FilterRule
 import org.apache.spark.rdd.RDD
-import util.Base
 import util.Base.XML.XPath
 import scala.util.control.Exception._
 
