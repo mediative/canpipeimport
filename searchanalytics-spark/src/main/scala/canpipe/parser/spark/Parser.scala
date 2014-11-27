@@ -319,17 +319,17 @@ object eventDetail {
     val l = aMap.getOrElse("/root/Event/search/directoriesReturned", List(""))
     val dirIds = {
       if (l.head.trim.isEmpty) {
-        List(-1L) // TODO: NB = when directory does not match anything, the value in table will be -1L. That OK?
+        Set(-1L) // TODO: NB = when directory does not match anything, the value in table will be -1L. That OK?
       } else {
         val dirsReturned = l.head
         // 'dirsReturned' look like this: 107553:One Toronto Core West,107556:One Toronto Core SE,107555:One Toronto Core Ctr,107554:One Toronto Core NE
         val DirectoryRegex = """(\d*):(.*)""".r // TODO: put this somewhere else
-        dirsReturned.split(",").flatMap { aDir => catching(classOf[Exception]).opt { val DirectoryRegex(id, name) = aDir; id.toLong } }.toList
+        dirsReturned.split(",").flatMap { aDir => catching(classOf[Exception]).opt { val DirectoryRegex(id, name) = aDir; id.toLong } }.toSet
       }
     }
     val headingsNames = aMap.getOrElse("/root/Event/search/allHeadings/heading/name", List(""))
     val headingsCats = aMap.getOrElse("/root/Event/search/allHeadings/heading/category", List(""))
-    val headingsWithCats = headingsNames zip headingsCats
+    val headingsWithCats = (headingsNames zip headingsCats).toSet
     val dirsHeadingsAndCats = for (dir <- dirIds; headingAndCat <- headingsWithCats) yield (dir, headingAndCat)
     dirsHeadingsAndCats.foldLeft(List.empty[Option[eventDetail]]) {
       case (listOfEventOpts, (aDirectoryId, (aHeading, itsCategory))) =>
