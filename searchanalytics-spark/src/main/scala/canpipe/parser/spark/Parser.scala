@@ -253,11 +253,9 @@ object eventDetail {
    * @return
    */
   private[spark] def sanityCheck(e: eventDetail): Option[eventDetail] = {
-    if (e.eventId.isEmpty) {
-      // println("Event has an empty id")
-      None
-    } else
-      Some(e)
+    val f = List(e.eventId.isEmpty, e.eventTimestamp.isEmpty)
+    if (f.forall(_ == false)) Some(e)
+    else None
   }
 
   /**
@@ -337,7 +335,7 @@ object eventDetail {
           headingId = runOrDefault[String, Long] { _.toLong }(-1L)(aHeading),
           headingRelevance = itsCategory,
           eventId = getOrEmpty("/root/Event/@id"),
-          eventTimestamp = getOrEmpty("/root/Event/@timestamp"),
+          eventTimestamp = { /* if (aMap.contains("/root/Event/@timestamp")) println(s"------------EXISTS------------ = ${aMap.get("/root/Event/@timestamp").get}") else println("NOOOOOOOOOOOOOOOOO"); */ getOrEmpty("/root/Event/@timestamp") },
           timestampId = parseAsLongOrDefault("/root/Event/timestampId", "timestampId"),
           eventSite = getOrEmpty("/root/Event/@site"),
           eventSiteLanguage = getOrEmpty("/root/Event/@siteLanguage"),
@@ -422,7 +420,12 @@ object Parser {
             Map.empty[String, scala.List[String]]
           }
           case theSource => {
-            BasicParser.parseEvent(xml = new XMLEventReader(theSource), startXPath = XPath("/root/Event"), eventIdOpt = None)
+            val x = BasicParser.parseEvent(xml = new XMLEventReader(theSource), startXPath = XPath("/root/Event"), eventIdOpt = None)
+            /*
+            println("-------------------------------------------------------------------")
+            x.foreach { case (k, v) => println(s"${k} = ${v}") }
+            */
+            x
           }
         }
       }
