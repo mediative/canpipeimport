@@ -243,6 +243,7 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "generate the correct timestamp and its 'foreign-key', as the timestamp is valid" in {
+    import scala.util.control.Exception._
     val eventsXML =
       <root>
         <Event id="54de05a7-cc76-4e7b-9244-108b5cfd2962" timestamp="2014-09-30T11:59:59.956-04:00" site="ypg" siteLanguage="EN" eventType="click" isMap="false" typeOfLog="click">
@@ -264,8 +265,13 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     val setOfResults = testParse(eventsXML)
     assert(setOfResults.size == 1)
     val firstEvent = setOfResults.head
-    withClue("No timestamp entry") { assert(firstEvent.get("/root/Event/@timestamp").isDefined) }
-    withClue("No timestamp FK entry") { assert(firstEvent.get("/root/Event/timestampId").isDefined) }
+    val eventTimestampOpt = firstEvent.get("/root/Event/@timestamp")
+    withClue("No timestamp entry") { assert(eventTimestampOpt.isDefined) }
+    val eventTimestampIdOpt = firstEvent.get("/root/Event/timestampId")
+    withClue("No timestamp FK entry") { assert(eventTimestampIdOpt.isDefined) }
+    withClue("Timestamp entry is empty") { assert(!eventTimestampOpt.get.head.isEmpty) }
+    withClue("Timestamp FK entry is empty") { assert(!eventTimestampIdOpt.get.head.isEmpty) }
+    withClue("Timestamp FK entry is *NOT* a Long") { assert((catching(classOf[Exception]) opt { eventTimestampIdOpt.get.head.toLong }).isDefined) }
   }
 
   case class fileFromResources(name: String, eventsItContains: Long)

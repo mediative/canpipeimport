@@ -263,7 +263,7 @@ object Base {
                       println("No [id] for event!!! Ignoring.")
                       None
                     case Some(idNameAndValue) =>
-                      val currentXPath = XPath.add(startXPath, label)
+                      val currentXPath = { if (startXPath.asString.endsWith(label)) startXPath else XPath.add(startXPath, label) }
                       val eventid = idNameAndValue._2
                       Some(eventid, parseAttributes(attrsMap, currentXPath))
                   }
