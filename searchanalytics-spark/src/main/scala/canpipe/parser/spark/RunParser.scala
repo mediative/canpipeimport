@@ -150,7 +150,8 @@ object RunParser {
       import sqlContext._
       val allEvents = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
-      saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = fileNameNoDir, dirToSynchronize = HDFS_EVENTS_LOCATION)
+      val cleanedFileName = fileNameNoDir.replace(" ", "").replace("-", "")
+      saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
     }
 
   }
