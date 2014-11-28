@@ -145,12 +145,13 @@ object RunParser {
        */
       val myParser = new SparkParser(filterRules)
       //
-      val sc = new SparkContext("local[4]", "appName")
+      val sc = new SparkContext()
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
       import sqlContext._
       val allEvents = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
-      saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = fileNameNoDir, dirToSynchronize = HDFS_EVENTS_LOCATION)
+      val cleanedFileName = fileNameNoDir.replace(" ", "").replace("-", "")
+      saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
     }
 
   }
