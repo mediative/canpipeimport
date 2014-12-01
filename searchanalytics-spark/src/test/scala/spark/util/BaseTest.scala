@@ -1,18 +1,12 @@
 package spark.util
 
-import java.io.PrintWriter
-
-import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
 import org.scalatest.{ BeforeAndAfter, FlatSpec }
 import spark.util.Base.HDFS
-import util.Base.using
 
 class BaseTest extends FlatSpec with BeforeAndAfter {
 
-  // TODO: generate here a name that FOR SURE would make the directory non-existent
-  // (eg, a VERY long word?)
-  val nonExistentDirectoryName = "lalala"
+  val nonExistentDirectoryName = util.Base.String.generateRandom(10)
 
   before {
     assert(!HDFS.directoryExists(nonExistentDirectoryName))
@@ -23,18 +17,14 @@ class BaseTest extends FlatSpec with BeforeAndAfter {
   }
 
   private def writeASampleFile(fileName: String): Boolean = {
-    try {
-      val output = FileSystem.get(new Configuration()).create(new Path(fileName))
-      using(new PrintWriter(output)) { writer =>
-        writer.write("lalala")
-      }
-      true
-    } catch {
-      case e: Exception => {
-        println(s"Error: ${e.getMessage}")
-        false
-      }
-    }
+    HDFS.writeToFile(fileName, "lalala")
+  }
+
+  "HDFS write to file" should "just work" in {
+    val aFileName = util.Base.String.generateRandom(10) + ".tmp"
+    HDFS.writeToFile(aFileName, "salut")
+    assert(HDFS.fileExists(aFileName))
+    withClue(s"Impossible to delete file '${aFileName}'") { HDFS.rm(aFileName) }
   }
 
   "HDFS List of Files in Folder" should "be empty for a non-existent directory" in {

@@ -1,8 +1,12 @@
 package spark.util
 
 // TODO: add this ==> import com.typesafe.scalalogging.slf4j.StrictLogging
+
+import java.io.PrintWriter
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
+import util.Base._
 
 /**
  * Several Utilities.
@@ -120,6 +124,21 @@ object Base { // TODO: add this ==> extends StrictLogging {
         noExceptionDelete(new Path(fileName)).isDefined
       }
       !fileExists(fileName) && !directoryExists(fileName)
+    }
+
+    def writeToFile(fileName: String, what: String): Boolean = {
+      try {
+        val output = FileSystem.get(new Configuration()).create(new Path(fileName))
+        using(new PrintWriter(output)) { writer =>
+          writer.write(what)
+        }
+        true
+      } catch {
+        case e: Exception => {
+          println(s"Error: ${e.getMessage}") // TODO: replace by 'logger.error'
+          false
+        }
+      }
     }
 
   }
