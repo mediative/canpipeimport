@@ -114,7 +114,7 @@ object SearchAnalyticsBuild extends Build {
     .configs(IntegrationTest)
     .settings(hadoopSettings: _*)
     .settings(testOptions in IntegrationTest := Seq(Tests.Filter(s => s.contains("Test"))))
-    .settings(parallelExecution in IntegrationTest := false)
+    .settings(parallelExecution in Test := false)
     .settings(SbtStartScript.startScriptForClassesSettings: _*)
     .dependsOn(core)
 
