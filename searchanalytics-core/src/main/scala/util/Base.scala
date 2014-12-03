@@ -17,10 +17,6 @@ object Base {
     Writer(executionTime, result)
   }
 
-  /*
-  def timeInMs[R](block: => R): (Long, R) = measureTime(System.currentTimeMillis)(block).run
-  def timeInNanoSecs[R](block: => R): (Long, R) = measureTime(System.nanoTime)(block).run
-  */
   def timeInMs[R](block: => R): Writer[Long, R] = measureTime(System.currentTimeMillis)(block)
   def timeInNanoSecs[R](block: => R): Writer[Long, R] = measureTime(System.nanoTime)(block)
 

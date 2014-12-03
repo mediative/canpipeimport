@@ -1,10 +1,10 @@
 package canpipe.parser.spark
 
+import canpipe.CanpipeFileName
 import canpipe.parser.{ RejectRule, FilterRule }
 import org.apache.spark.SparkContext
 import canpipe.parser.spark.{ Parser => SparkParser }
 import org.apache.spark.rdd.RDD
-import spark.CanpipeFileName
 import spark.util.xml.XMLPiecePerLine
 import spark.util.{ Base => SparkUtil }
 import util.{ Base => BaseUtil, Logging }
@@ -83,6 +83,7 @@ object RunParser extends Logging {
   }
 
   private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
+
     def sanityCheckParquetGeneration(whereWasItSaved: String): Boolean = {
       // Parquet files are self-describing so the schema is preserved.
       val rddFromParquetFile = sqlContext.parquetFile(whereWasItSaved)

@@ -5,8 +5,6 @@ import util.types.reader.Base.ReadSym
 import util.xml.Base._
 import canpipe.xml.XMLFields
 import util.Logging
-import util.wrapper.Wrapper
-
 import scala.util.control.Exception._
 import XMLFields._
 import util.xml.{ Field => XMLField }

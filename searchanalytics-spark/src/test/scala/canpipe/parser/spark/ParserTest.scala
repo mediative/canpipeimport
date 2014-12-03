@@ -1,6 +1,5 @@
 package canpipe.parser.spark
 
-import spark.CanpipeFileName
 import spark.util.xml.XMLPiecePerLine
 import util.{ Base => BaseUtil }
 import spark.util.{ Base => SparkUtil }
