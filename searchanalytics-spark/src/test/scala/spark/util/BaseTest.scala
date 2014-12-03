@@ -24,7 +24,7 @@ class BaseTest extends FlatSpec with BeforeAndAfter {
     val aFileName = util.Base.String.generateRandom(10) + ".tmp"
     HDFS.writeToFile(aFileName, "salut")
     assert(HDFS.fileExists(aFileName))
-    withClue(s"Impossible to delete file '${aFileName}'") { HDFS.rm(aFileName) }
+    withClue(s"Impossible to delete file '${aFileName}'") { assert(HDFS.rm(aFileName)) }
   }
 
   "HDFS List of Files in Folder" should "be empty for a non-existent directory" in {
@@ -32,14 +32,6 @@ class BaseTest extends FlatSpec with BeforeAndAfter {
   }
 
   it should "start with name of folder" in {
-    Set(true, false) foreach { r =>
-      HDFS.ls(nonExistentDirectoryName, recursive = r) foreach { fileName =>
-        assert(fileName.startsWith(nonExistentDirectoryName))
-      }
-    }
-  }
-
-  it should "start with name of folder when folder is HERE" in {
     val directoryName = "."
     assert(HDFS.directoryExists(directoryName))
     Set(true, false) foreach { r =>
