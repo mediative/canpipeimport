@@ -9,6 +9,7 @@ import scala.util.control.Exception._
 import XMLFields._
 import util.xml.{ Field => XMLField }
 import canpipe.xml.{ Elem => CanpipeXMLElem }
+import util.xml.Base._ // among other things, brings implicits into scope
 
 case class EventDetail(
   basicInfo: EventDetail.BasicInfo,
@@ -346,6 +347,23 @@ object EventDetail extends Logging {
         }
       }.getOrElse(Seq.empty)
 
+  }
+
+  /**
+   * TODO: write this.
+   * @param e
+   * @return
+   */
+  private[canpipe] def sanityCheck(e: EventDetail): Option[EventDetail] = {
+    // TODO: following structure sucks.
+    val importantFields = List(
+      ("eventId", e.basicInfo.id.isEmpty),
+      ("eventTimestamp", e.basicInfo.timestamp.isEmpty))
+    importantFields.
+      find { case (_, errorCondition) => errorCondition }.
+      map { case (fieldName, _) => fieldName }.
+      map { fieldName => println(s"${fieldName} is empty"); None }. // TODO: logger.error
+      getOrElse(Some(e))
   }
 
 }
