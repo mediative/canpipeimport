@@ -41,8 +41,9 @@ class Parser(val filterRules: Set[FilterRule]) {
     rp.flatMap { anXMLNode =>
       canpipe.xml.Elem(anXMLNode).map { canpipeXMLNode =>
         // TODO: use 'filterRules' here
-        val ed = EventDetail(canpipeXMLNode)
-        // val (t4, ed) = util.Base.timeInMs { EventDetail(canpipeXMLNode) }  // TODO: put this with 'logger.debug'
+        // TODO: use also the 'headings' and 'directories'
+        val ed = canpipe.Tables(canpipeXMLNode).events
+        // val (t4, ed) = util.Base.timeInMs { <code to generate data> }  // TODO: put this with 'logger.debug'
         //println(s"\t\t create an EventDetail took ${t4} ms.")
         ed
       }.getOrElse(None)
