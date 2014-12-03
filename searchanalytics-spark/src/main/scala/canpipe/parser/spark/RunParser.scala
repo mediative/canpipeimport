@@ -1,8 +1,10 @@
 package canpipe.parser.spark
 
+import canpipe.CanpipeFileName
 import canpipe.parser.{ RejectRule, FilterRule }
 import org.apache.spark.SparkContext
 import canpipe.parser.spark.{ Parser => SparkParser }
+import spark.util.wrapper.HDFSFileName
 import spark.util.{ Base => SparkUtil }
 import util.{ Base => BaseUtil }
 import org.apache.hadoop.fs.Path
@@ -79,7 +81,7 @@ object RunParser {
     }
   }
 
-  private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String) = {
+  private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
     import sqlContext._
 
     def sanityCheckParquetGeneration(whereWasItSaved: String): Boolean = {
@@ -148,10 +150,14 @@ object RunParser {
       val sc = new SparkContext()
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
       import sqlContext._
-      val allEvents = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
+      val allEvents = myParser.parse(sc, fN = HDFSFileName(hdfsFileName))
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
       val cleanedFileName = fileNameNoDir.replace(" ", "").replace("-", "")
-      saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
+      val (timeToSave, _) =
+        util.Base.timeInMs {
+          saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
+        }
+      println(s"Saving took ${timeToSave} ms.!!!")
     }
 
   }
