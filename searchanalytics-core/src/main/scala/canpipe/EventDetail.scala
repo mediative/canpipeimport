@@ -50,9 +50,6 @@ class EventDetail(
   val searchGeoType: String /* /root/Event/search/matchedGeo/type */ ,
   val searchGeoPolygonIds: String /* /root/Event/search/matchedGeo/polygonIds */ ,
   val tierUdacCountList: String /* /root/Event/search/allListingsTypesMainLists */ ,
-  val directoryId: Long /* decomposition of /root/Event/search/directoriesReturned */ ,
-  val headingId: Long /* /root/Event/search/allHeadings/heading/name */ ,
-  val headingRelevance: String /* 'A' or 'B'*/ /* /root/Event/search/allHeadings/heading/category */ , // TODO: put this as Char. Spark had problems with it - sove them! scala.MatchError: scala.Char (of class scala.reflect.internal.Types$TypeRef$$anon$6)
   val searchType: String /* /root/Event/search/type */ , val searchResultPage: String /* /root/Event/search/resultPage */ ,
   val searchResultPerPage: String /* /root/Event/search/resultPerPage */ , val searchLatitude: String /* /root/Event/search/latitude */ ,
   val searchLongitude: String /* /root/Event/search/longitude */ ,
@@ -120,9 +117,6 @@ class EventDetail(
          | searchGeoType (/root/Event/search/matchedGeo/type) = ${searchGeoType},
          | searchGeoPolygonIds (/root/Event/search/matchedGeo/polygonIds) = ${searchGeoPolygonIds},
          | tierUdacCountList (/root/Event/search/allListingsTypesMainLists) = ${tierUdacCountList},
-         | directoryId (/root/Event/search/directoriesReturned) = ${directoryId},
-         | headingId (/root/Event/search/allHeadings/heading/name) = ${headingId},
-         | headingRelevance (/root/Event/search/allHeadings/heading/category) = ${headingRelevance},
          | searchType (/root/Event/search/type) = ${searchType},
          | searchResultPage (/root/Event/search/resultPage) = ${searchResultPage},
          | searchResultPerPage (/root/Event/search/resultPerPage) = ${searchResultPerPage},
@@ -155,7 +149,7 @@ class EventDetail(
 
   override def canEqual(that: Any): Boolean = that.isInstanceOf[EventDetail]
 
-  override def productArity: Int = 67
+  override def productArity: Int = 64
 
   @throws(classOf[IndexOutOfBoundsException])
   override def productElement(n: Int) = n match {
@@ -196,36 +190,33 @@ class EventDetail(
     case 34 => searchGeoType
     case 35 => searchGeoPolygonIds
     case 36 => tierUdacCountList
-    case 37 => directoryId
-    case 38 => headingId
-    case 39 => headingRelevance
-    case 40 => searchType
-    case 41 => searchResultPage
-    case 42 => searchResultPerPage
-    case 43 => searchLatitude
-    case 44 => searchLongitude
-    case 45 => merchantId
-    case 46 => merchantZone
-    case 47 => merchantLatitude
-    case 48 => merchantLongitude
-    case 49 => merchantDistance
-    case 50 => merchantDisplayPosition
-    case 51 => merchantIsNonAdRollup
-    case 52 => merchantRank
-    case 53 => merchantIsRelevantListing
-    case 54 => merchantIsRelevantHeading
-    case 55 => merchantHeadingIdList
-    case 56 => merchantChannel1List
-    case 57 => merchantChannel2List
-    case 58 => productType
-    case 59 => productLanguage
-    case 60 => productUdac
-    case 61 => merchantListingType
-    case 62 => searchAnalysisIsfuzzy
-    case 63 => searchAnalysisIsGeoExpanded
-    case 64 => searchAnalysisIsBusinessName
-    case 65 => key
-    case 66 => value
+    case 37 => searchType
+    case 38 => searchResultPage
+    case 39 => searchResultPerPage
+    case 40 => searchLatitude
+    case 41 => searchLongitude
+    case 42 => merchantId
+    case 43 => merchantZone
+    case 44 => merchantLatitude
+    case 45 => merchantLongitude
+    case 46 => merchantDistance
+    case 47 => merchantDisplayPosition
+    case 48 => merchantIsNonAdRollup
+    case 49 => merchantRank
+    case 50 => merchantIsRelevantListing
+    case 51 => merchantIsRelevantHeading
+    case 52 => merchantHeadingIdList
+    case 53 => merchantChannel1List
+    case 54 => merchantChannel2List
+    case 55 => productType
+    case 56 => productLanguage
+    case 57 => productUdac
+    case 58 => merchantListingType
+    case 59 => searchAnalysisIsfuzzy
+    case 60 => searchAnalysisIsGeoExpanded
+    case 61 => searchAnalysisIsBusinessName
+    case 62 => key
+    case 63 => value
     case _ => throw new IndexOutOfBoundsException(n.toString())
   }
 
