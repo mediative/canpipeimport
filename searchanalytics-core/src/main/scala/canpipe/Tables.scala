@@ -91,7 +91,7 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
         timestampId = theTimestampId,
         eventSite = getOrEmpty(EVENT_SITE),
         eventSiteLanguage = getOrEmpty(EVENT_SITELANGUAGE),
-        // eventType = getOrEmpty(EVENT_TYPE), // TODO
+        eventType = getOrEmpty(EVENT_TYPE),
         userId = getOrEmpty(EVENT_USER_ID),
         apiKey = getOrEmpty(EVENT_API_KEY),
         userSessionId = getOrEmpty(EVENT_USER_SESSIONID),

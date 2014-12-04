@@ -262,9 +262,31 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
           val rdd = myParser.parse(sc, HDFSFileName(name = fileName))
           val rddOfEvents = rdd.flatMap(_.eventOpt)
           val howManyEmptyTimestamps = rddOfEvents.filter(e => e.eventTimestamp.trim.isEmpty).count()
-          withClue("'eventTimestamp's invalid") { assert(howManyEmptyTimestamps == 0) }
+          withClue(s"${fileInfo.name}: 'eventTimestamp's invalid") { assert(howManyEmptyTimestamps == 0) }
           val howManyInvalidTimestamps = rddOfEvents.filter(e => e.timestampId < 0).count()
-          withClue("'timestampId's invalid") { assert(howManyInvalidTimestamps == 0) }
+          withClue(s"${fileInfo.name}: 'timestampId's invalid") { assert(howManyInvalidTimestamps == 0) }
+      }
+    } finally {
+      sc.stop()
+      System.clearProperty("spark.master.port")
+    }
+  }
+
+  it should "yield events with proper eventType, 99% of the time" in {
+    val testName = "my test"
+    val sc = new SparkContext("local[4]", testName)
+    val myParser = new Parser()
+
+    try {
+      resourceFileNamesAndNumberOfEvents.foreach {
+        case (fileInfo, _) =>
+          val fileName = fileInfo.name.absoluteFileName
+          val rddOfEvents = myParser.parse(sc, HDFSFileName(name = fileName)).flatMap(_.eventOpt)
+          val howManyEmptyEventIds = rddOfEvents.filter(_.eventType.trim.isEmpty).count()
+          val propOfEmpties = ((howManyEmptyEventIds * 100): Double) / fileInfo.eventsItContains
+          withClue(s"On ${fileInfo.name}") { assert(propOfEmpties < 1) }
+          if (howManyEmptyEventIds > 0)
+            info(s" ====> There are ${howManyEmptyEventIds} (out of ${fileInfo.eventsItContains}) events without 'eventId' on ${fileInfo.name}")
       }
     } finally {
       sc.stop()

@@ -16,7 +16,7 @@ class EventDetail(
   val timestampId: Long, /* FK to Time table */
   val eventSite: String, /* /root/Event/@site */
   val eventSiteLanguage: String, /* /root/Event/@siteLanguage */
-  // TODO: we need "/root/Event/@eventType": String, // Two values are possible "impression" which is a SERP event, or "click" which is an MP event
+  val eventType: String,
   val userId: String, /* /root/Event/@userId */
   val apiKey: String /* /root/Event/apiKey */ , val userSessionId: String /* /root/Event/sessionId */ ,
   val transactionDuration: Long /* /root/Event/transactionDuration */ ,
@@ -85,6 +85,7 @@ class EventDetail(
          | eventTimestamp (/root/Event/@timestamp) = ${eventTimestamp},
          | eventSite (/root/Event/@site) = ${eventSite},
          | eventSiteLanguage (/root/Event/@siteLanguage) = ${eventSiteLanguage},
+         | eventType = ${eventType},
          | userId (/root/Event/@userId) = ${userId},
          | apiKey (/root/Event/apiKey) = ${apiKey},
          | userSessionId (/root/Event/sessionId) = ${userSessionId},
@@ -149,7 +150,7 @@ class EventDetail(
 
   override def canEqual(that: Any): Boolean = that.isInstanceOf[EventDetail]
 
-  override def productArity: Int = 64
+  override def productArity: Int = 65
 
   @throws(classOf[IndexOutOfBoundsException])
   override def productElement(n: Int) = n match {
@@ -158,65 +159,66 @@ class EventDetail(
     case 2 => timestampId
     case 3 => eventSite
     case 4 => eventSiteLanguage
-    case 5 => userId
-    case 6 => apiKey
-    case 7 => userSessionId
-    case 8 => transactionDuration
-    case 9 => isResultCached
-    case 10 => eventReferrer
-    case 11 => pageName
-    case 12 => requestUri
-    case 13 => userIP
-    case 14 => userAgent
-    case 15 => userIsRobot
-    case 16 => userLocation
-    case 17 => userBrowser
-    case 18 => searchId
-    case 19 => searchWhat
-    case 20 => searchWhere
-    case 21 => searchResultCount
-    case 22 => searchWhatResolved
-    case 23 => searchIsDisambiguation
-    case 24 => searchIsSuggestion
-    case 25 => searchFailedOrSuccess
-    case 26 => searchHasRHSListings
-    case 27 => searchHasNonAdRollupListings
-    case 28 => searchIsCalledBing
-    case 29 => searchGeoOrDir
-    case 30 => categoryId
-    case 31 => tierId
-    case 32 => tierCount
-    case 33 => searchGeoName
-    case 34 => searchGeoType
-    case 35 => searchGeoPolygonIds
-    case 36 => tierUdacCountList
-    case 37 => searchType
-    case 38 => searchResultPage
-    case 39 => searchResultPerPage
-    case 40 => searchLatitude
-    case 41 => searchLongitude
-    case 42 => merchantId
-    case 43 => merchantZone
-    case 44 => merchantLatitude
-    case 45 => merchantLongitude
-    case 46 => merchantDistance
-    case 47 => merchantDisplayPosition
-    case 48 => merchantIsNonAdRollup
-    case 49 => merchantRank
-    case 50 => merchantIsRelevantListing
-    case 51 => merchantIsRelevantHeading
-    case 52 => merchantHeadingIdList
-    case 53 => merchantChannel1List
-    case 54 => merchantChannel2List
-    case 55 => productType
-    case 56 => productLanguage
-    case 57 => productUdac
-    case 58 => merchantListingType
-    case 59 => searchAnalysisIsfuzzy
-    case 60 => searchAnalysisIsGeoExpanded
-    case 61 => searchAnalysisIsBusinessName
-    case 62 => key
-    case 63 => value
+    case 5 => eventType
+    case 6 => userId
+    case 7 => apiKey
+    case 8 => userSessionId
+    case 9 => transactionDuration
+    case 10 => isResultCached
+    case 11 => eventReferrer
+    case 12 => pageName
+    case 13 => requestUri
+    case 14 => userIP
+    case 15 => userAgent
+    case 16 => userIsRobot
+    case 17 => userLocation
+    case 18 => userBrowser
+    case 19 => searchId
+    case 20 => searchWhat
+    case 21 => searchWhere
+    case 22 => searchResultCount
+    case 23 => searchWhatResolved
+    case 24 => searchIsDisambiguation
+    case 25 => searchIsSuggestion
+    case 26 => searchFailedOrSuccess
+    case 27 => searchHasRHSListings
+    case 28 => searchHasNonAdRollupListings
+    case 29 => searchIsCalledBing
+    case 30 => searchGeoOrDir
+    case 31 => categoryId
+    case 32 => tierId
+    case 33 => tierCount
+    case 34 => searchGeoName
+    case 35 => searchGeoType
+    case 36 => searchGeoPolygonIds
+    case 37 => tierUdacCountList
+    case 38 => searchType
+    case 39 => searchResultPage
+    case 40 => searchResultPerPage
+    case 41 => searchLatitude
+    case 42 => searchLongitude
+    case 43 => merchantId
+    case 44 => merchantZone
+    case 45 => merchantLatitude
+    case 46 => merchantLongitude
+    case 47 => merchantDistance
+    case 48 => merchantDisplayPosition
+    case 49 => merchantIsNonAdRollup
+    case 50 => merchantRank
+    case 51 => merchantIsRelevantListing
+    case 52 => merchantIsRelevantHeading
+    case 53 => merchantHeadingIdList
+    case 54 => merchantChannel1List
+    case 55 => merchantChannel2List
+    case 56 => productType
+    case 57 => productLanguage
+    case 58 => productUdac
+    case 59 => merchantListingType
+    case 60 => searchAnalysisIsfuzzy
+    case 61 => searchAnalysisIsGeoExpanded
+    case 62 => searchAnalysisIsBusinessName
+    case 63 => key
+    case 64 => value
     case _ => throw new IndexOutOfBoundsException(n.toString())
   }
 
