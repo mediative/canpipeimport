@@ -81,7 +81,12 @@ object RunParser extends Logging {
     }
   }
 
-  private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
+  private[spark] def saveRDDAsParquetAndCleanUp(
+    sqlContext: org.apache.spark.sql.SQLContext,
+    thisRDD: org.apache.spark.sql.SchemaRDD,
+    workingDir: String,
+    prefixOfFile: String,
+    dirToSynchronize: String): Boolean = {
 
     def sanityCheckParquetGeneration(whereWasItSaved: String): Boolean = {
       // Parquet files are self-describing so the schema is preserved.
@@ -108,7 +113,8 @@ object RunParser extends Logging {
     // sanity check:
     if (sanityCheckParquetGeneration(whereWasItSaved = parquetFileName)) {
       synchronizeMainFolderAndCleanSource(mainFolder = dirToSynchronize, sourceFolder = parquetFileName)
-    }
+    } else
+      false
   }
 
   private[spark] def saveEventsRDDAsParquetAndCleanUp(sc: SparkContext, sqlContext: org.apache.spark.sql.SQLContext, eventsRDD: RDD[EventDetail], workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
@@ -176,7 +182,7 @@ object RunParser extends Logging {
       val cleanedSrcFileName = fileNameNoDir.replace(" ", "").replace("-", "")
       // event table
       val events = tables.map(_.events).flatMap(identity(_))
-      val (timeToSaveEvents, _) =
+      val (timeToSaveEvents, eventProperlySaved) =
         util.Base.timeInMs {
           saveRDDAsParquetAndCleanUp(
             sqlContext,
@@ -185,29 +191,41 @@ object RunParser extends Logging {
             prefixOfFile = cleanedSrcFileName,
             dirToSynchronize = globalConf.eventsFolders.output)
         }.run
-      // headings table
-      val headings = tables.map(_.headings).flatMap(identity(_))
-      val (timeToSaveHeadings, _) =
-        util.Base.timeInMs {
-          saveRDDAsParquetAndCleanUp(
-            sqlContext,
-            thisRDD = headings,
-            workingDir = globalConf.headingsFolders.workingTmp,
-            prefixOfFile = cleanedSrcFileName,
-            dirToSynchronize = globalConf.headingsFolders.output)
-        }.run
-      // directories table
-      val directories = tables.map(_.directories).flatMap(identity(_))
-      val (timeToSaveDirectories, _) =
-        util.Base.timeInMs {
-          saveRDDAsParquetAndCleanUp(
-            sqlContext,
-            thisRDD = directories,
-            workingDir = globalConf.directoriesFolders.workingTmp,
-            prefixOfFile = cleanedSrcFileName,
-            dirToSynchronize = globalConf.directoriesFolders.output)
-        }.run
-      println(s"Saving EVENTS took ${timeToSaveEvents} ms.,  HEADINGS took ${timeToSaveHeadings} ms.,  DIRECTORIES took ${timeToSaveDirectories} ms.!!!")
+      if (!eventProperlySaved) {
+        println(s"Event *NOT PROPERLY SAVED*, aborting this non-sense right now!!!")
+      } else {
+        //  headings table
+        val headings = tables.map(_.headings).flatMap(identity(_))
+        val (timeToSaveHeadings, headingsProperlySaved) =
+          util.Base.timeInMs {
+            saveRDDAsParquetAndCleanUp(
+              sqlContext,
+              thisRDD = headings,
+              workingDir = globalConf.headingsFolders.workingTmp,
+              prefixOfFile = s"${cleanedSrcFileName}.headings",
+              dirToSynchronize = globalConf.headingsFolders.output)
+          }.run
+        // directories table
+        val directories = tables.map(_.directories).flatMap(identity(_))
+        val (timeToSaveDirectories, directoriesProperlySaved) =
+          util.Base.timeInMs {
+            saveRDDAsParquetAndCleanUp(
+              sqlContext,
+              thisRDD = directories,
+              workingDir = globalConf.directoriesFolders.workingTmp,
+              prefixOfFile = s"${cleanedSrcFileName}.directories",
+              dirToSynchronize = globalConf.directoriesFolders.output)
+          }.run
+        println(s"Saving EVENTS took ${timeToSaveEvents} ms. (added to location = ${globalConf.eventsFolders.output})")
+        if (headingsProperlySaved)
+          println(s"HEADINGS saved in ${timeToSaveHeadings} ms. (added to location = ${globalConf.headingsFolders.output})")
+        else
+          println("HEADINGS **NOT SAVED**")
+        if (directoriesProperlySaved)
+          println(s"DIRECTORIES saved in ${timeToSaveDirectories} ms. (added to location = ${globalConf.directoriesFolders.output})")
+        else
+          println("DIRECTORIES **NOT SAVED**")
+      }
     }
 
   }
