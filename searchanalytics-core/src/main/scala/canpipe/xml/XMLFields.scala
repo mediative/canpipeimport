@@ -26,7 +26,7 @@ object XMLFields {
   /* Main event attributes and fields */
   val EVENT_ID = XMLField(s"Event/@id")
   val EVENT_TIMESTAMP = XMLField("Event/@timestamp")
-  val EVENT_SITE = XMLField("Event/@timestamp")
+  val EVENT_SITE = XMLField("Event/@site")
   val EVENT_SITELANGUAGE = XMLField("Event/@siteLanguage")
   val EVENT_TYPE = XMLField("Event/@eventType")
   val EVENT_USER_ID = XMLField("Event/@userId")
