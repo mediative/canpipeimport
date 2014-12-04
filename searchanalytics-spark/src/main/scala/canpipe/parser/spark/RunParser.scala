@@ -184,7 +184,6 @@ object RunParser extends Logging {
       val (timeToSave, _) =
         util.Base.timeInMs {
           saveEventsRDDAsParquetAndCleanUp(sc, sqlContext, allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
-          // saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
         }.run
       logger.info(s"Saving took ${timeToSave} ms.!!!")
     }
