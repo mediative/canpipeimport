@@ -116,11 +116,7 @@ object RunParser {
 
   // TODO: replace all 'println' by writing to Spark logs
   def main(args: Array[String]) {
-    // TODO: put all these constants in a config file and/or read them from parameters in call
-    val HDFS_ROOT_LOCATION = "/source/canpipe/parquet" // root hdfs directory where data will live, once generated
-    val HDFS_WORKING_LOCATION = s"${HDFS_ROOT_LOCATION}/workingTmp"
-    val HDFS_EVENTS_WORKING_LOCATION = s"${HDFS_WORKING_LOCATION}/events" // directory where events will live, once generated
-    val HDFS_EVENTS_LOCATION = s"${HDFS_ROOT_LOCATION}/events" // directory where events will live, once generated
+    import canpipe._
     val argsParsed = parseArgs(args.toList)
     if (!argsParsed.contains(FILENAMELABEL)) {
       println("Usage: RunParser [--hdfsfilename filename]")
@@ -150,14 +146,43 @@ object RunParser {
       val sc = new SparkContext()
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
       import sqlContext._
-      val allEvents = myParser.parse(sc, fN = HDFSFileName(hdfsFileName))
+      val tables = myParser.parse(sc, fN = HDFSFileName(hdfsFileName))
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
-      val cleanedFileName = fileNameNoDir.replace(" ", "").replace("-", "")
-      val (timeToSave, _) =
+      val cleanedSrcFileName = fileNameNoDir.replace(" ", "").replace("-", "")
+      // event table
+      val events = tables.map(_.eventOpt).flatMap(identity(_))
+      val (timeToSaveEvents, _) =
         util.Base.timeInMs {
-          saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
+          saveRDDAsParquetAndCleanUp(
+            sqlContext,
+            thisRDD = events,
+            workingDir = globalConf.eventsFolders.workingTmp,
+            prefixOfFile = cleanedSrcFileName,
+            dirToSynchronize = globalConf.eventsFolders.output)
         }
-      println(s"Saving took ${timeToSave} ms.!!!")
+      // headings table
+      val headings = tables.map(_.headings).flatMap(identity(_))
+      val (timeToSaveHeadings, _) =
+        util.Base.timeInMs {
+          saveRDDAsParquetAndCleanUp(
+            sqlContext,
+            thisRDD = headings,
+            workingDir = globalConf.headingsFolders.workingTmp,
+            prefixOfFile = cleanedSrcFileName,
+            dirToSynchronize = globalConf.headingsFolders.output)
+        }
+      // directories table
+      val directories = tables.map(_.directories).flatMap(identity(_))
+      val (timeToSaveDirectories, _) =
+        util.Base.timeInMs {
+          saveRDDAsParquetAndCleanUp(
+            sqlContext,
+            thisRDD = directories,
+            workingDir = globalConf.directoriesFolders.workingTmp,
+            prefixOfFile = cleanedSrcFileName,
+            dirToSynchronize = globalConf.directoriesFolders.output)
+        }
+      println(s"Saving EVENTS took ${timeToSaveEvents} ms.,  HEADINGS took ${timeToSaveHeadings} ms.,  DIRECTORIES took ${timeToSaveDirectories} ms.!!!")
     }
 
   }

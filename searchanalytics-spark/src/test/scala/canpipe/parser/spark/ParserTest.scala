@@ -115,7 +115,7 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     def eventElem2Line(e: scala.xml.Elem) = e.toString.replace("\n", "")
     s"<root>\n${events.map(eventElem2Line).mkString("\n")}\n</root>"
   }
-  it should "properly generate as many rows as headings (when no directoy is involved)" in {
+  it should "properly generate the right amount of headings" in {
     val testName = "my test"
     val sc = new SparkContext("local[4]", testName)
     val myParser = new Parser()
@@ -139,9 +139,8 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     val fileNameCreated = s"${util.Base.String.generateRandom(10)}.xml"
     HDFS.writeToFile(fileName = fileNameCreated, xmlOneEventPerLine(List(anEvent)))
     try {
-      val rdd = myParser.parse(sc, HDFSFileName(name = fileNameCreated))
-      val theCount = rdd.count()
-      assert(theCount == 2)
+      val rddOfSetOfHeadings = myParser.parse(sc, HDFSFileName(name = fileNameCreated)).map(_.headings)
+      assert(rddOfSetOfHeadings.collect().head.size == 2)
     } finally {
       HDFS.rm(fileNameCreated)
       sc.stop()
@@ -149,7 +148,7 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     }
   }
 
-  it should "properly generate as many rows as headings * directories" in {
+  it should "properly generate the right amount of directories" in {
     val testName = "my test"
     val sc = new SparkContext("local[4]", testName)
     val myParser = new Parser()
@@ -174,9 +173,8 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     val fileNameCreated = s"${util.Base.String.generateRandom(10)}.xml"
     HDFS.writeToFile(fileName = fileNameCreated, xmlOneEventPerLine(List(anEvent)))
     try {
-      val rdd = myParser.parse(sc, HDFSFileName(name = fileNameCreated))
-      val theCount = rdd.count()
-      assert(theCount == 2 * 2) // headings * directories
+      val rddOfSetOfHeadings = myParser.parse(sc, HDFSFileName(name = fileNameCreated)).map(_.directories)
+      assert(rddOfSetOfHeadings.collect().head.size == 2)
     } finally {
       HDFS.rm(fileNameCreated)
       sc.stop()
@@ -191,7 +189,7 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
   }
   case class EventsFileWithCount(name: ResourceFileName, eventsItContains: Long)
   val resourceFileNamesAndNumberOfEvents: List[(EventsFileWithCount, Int)] = List(
-    // (EventsFileWithCount(ResourceFileName("sample.5000.xml"), 5000), 5),
+    (EventsFileWithCount(ResourceFileName("sample.5000.xml"), 5000), 5),
     (EventsFileWithCount(ResourceFileName("sample.50.xml"), 50), 15))
 
   "Parsing valid Canpipe files from HDFS" should "yield the right number of events (fast enough, por favor)" in {
@@ -219,8 +217,9 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
                 rdd
               }
             val theCount = rdd.count()
-            info(s"'${fileInfo.name}' (${fileInfo.eventsItContains} events) generated text file with ${theCount} rows in ${msToWrite} ms . THIS IS A LOWER BOUND FOR THE GENERATION OF A PARQUET FILE OF *THAT* SIZE <======================")
-            val howManyUniqueEvents = rdd.collect().groupBy(_.eventId).keySet.size
+            info(s"'${fileInfo.name}' (${fileInfo.eventsItContains} events) generated text file with ${theCount} rows in ${msToWrite} ms . ====> THIS IS A LOWER BOUND FOR THE GENERATION OF A PARQUET FILE OF *THAT* SIZE <====")
+            val rddOfEvents = rdd.flatMap(_.eventOpt)
+            val howManyUniqueEvents = rddOfEvents.collect().groupBy(_.eventId).keySet.size
             assert(howManyUniqueEvents == fileInfo.eventsItContains)
           } finally {
             SparkUtil.HDFS.rm(txtFileName)
@@ -241,8 +240,8 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
       resourceFileNamesAndNumberOfEvents.foreach {
         case (fileInfo, howManyEvents) =>
           val fileName = fileInfo.name.absoluteFileName
-          val rdd = myParser.parse(sc, HDFSFileName(name = fileName))
-          val howManyEmptyEventIds = rdd.filter(_.eventId.trim.isEmpty).count()
+          val rddOfEvents = myParser.parse(sc, HDFSFileName(name = fileName)).flatMap(_.eventOpt)
+          val howManyEmptyEventIds = rddOfEvents.filter(_.eventId.trim.isEmpty).count()
           assert(howManyEmptyEventIds == 0)
       }
     } finally {
@@ -261,9 +260,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
         case (fileInfo, howManyEvents) =>
           val fileName = fileInfo.name.absoluteFileName
           val rdd = myParser.parse(sc, HDFSFileName(name = fileName))
-          val howManyEmptyTimestamps = rdd.filter(e => e.eventTimestamp.trim.isEmpty).count()
+          val rddOfEvents = rdd.flatMap(_.eventOpt)
+          val howManyEmptyTimestamps = rddOfEvents.filter(e => e.eventTimestamp.trim.isEmpty).count()
           withClue("'eventTimestamp's invalid") { assert(howManyEmptyTimestamps == 0) }
-          val howManyInvalidTimestamps = rdd.filter(e => e.timestampId < 0).count()
+          val howManyInvalidTimestamps = rddOfEvents.filter(e => e.timestampId < 0).count()
           withClue("'timestampId's invalid") { assert(howManyInvalidTimestamps == 0) }
       }
     } finally {

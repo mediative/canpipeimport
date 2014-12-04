@@ -2,7 +2,7 @@ package canpipe.parser.spark
 
 import canpipe.parser.FilterRule
 import org.apache.spark.rdd.RDD
-import canpipe.EventDetail
+import canpipe.{ Tables, EventDetail }
 import spark.util.wrapper.HDFSFileName
 import spark.util.xml.{ Parser => SparkParser }
 import spark.util.xml.FileStructure
@@ -31,7 +31,7 @@ class Parser(val filterRules: Set[FilterRule]) {
    *       But I have no evidence whatsoever beyong that to suggest that *all* of them are stored that way.
    *       TODO: verify this hypothesis.
    */
-  def parse(sc: org.apache.spark.SparkContext, fN: HDFSFileName): RDD[EventDetail] = {
+  def parse(sc: org.apache.spark.SparkContext, fN: HDFSFileName): RDD[Tables] = { // RDD[EventDetail] = {
     // TODO: clean syntax
     val rdd = sc.textFile(fN.name)
     val fs = new FileStructure("root", rdd)
@@ -40,13 +40,16 @@ class Parser(val filterRules: Set[FilterRule]) {
     //println(fN.name + " =============================") // TODO: put this with 'logger.debug'
     rp.flatMap { anXMLNode =>
       canpipe.xml.Elem(anXMLNode).map { canpipeXMLNode =>
+        canpipe.Tables(canpipeXMLNode)
+        /*
         // TODO: use 'filterRules' here
         // TODO: use also the 'headings' and 'directories'
-        val ed = canpipe.Tables(canpipeXMLNode).events
+        val detailOpt = canpipe.Tables(canpipeXMLNode).eventOpt
         // val (t4, ed) = util.Base.timeInMs { <code to generate data> }  // TODO: put this with 'logger.debug'
         //println(s"\t\t create an EventDetail took ${t4} ms.")
-        ed
-      }.getOrElse(None)
+        detailOpt
+        */
+      }
     }
   }
 
