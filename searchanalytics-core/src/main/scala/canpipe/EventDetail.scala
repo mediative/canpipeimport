@@ -41,13 +41,17 @@ object EventDetail extends Logging {
     type Language = Value
     val EN, FR = Value
     def apply(aLangAsString: String): Option[Language] = {
-      (aLangAsString.trim.toUpperCase.substring(0, 2) match {
-        case "FR" => Some(FR)
-        case "EN" => Some(EN)
-        case _ =>
-          logger.error(s"Language '${aLangAsString}' is not recognized")
-          None
-      })
+      val upperCasedLang = aLangAsString.trim.toUpperCase
+      if (upperCasedLang.length < 2) None
+      else {
+        (upperCasedLang.substring(0, 2) match {
+          case "FR" => Some(FR)
+          case "EN" => Some(EN)
+          case _ =>
+            logger.error(s"Language '${aLangAsString}' is not recognized")
+            None
+        })
+      }
     }
   }
   import Language._
