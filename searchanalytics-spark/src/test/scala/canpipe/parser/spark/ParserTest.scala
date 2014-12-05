@@ -352,6 +352,31 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     }
   }
 
+  it should "yield headings with proper category, at least 75% of the time" in {
+    val testName = "my test"
+    val sc = new SparkContext("local[4]", testName)
+    val myParser = new Parser()
+
+    try {
+      resourceFileNamesAndNumberOfEvents.foreach {
+        case (fileInfo, _) =>
+          val fileName = fileInfo.name.absoluteFileName
+          // TODO: clean syntax
+          val rddTF = sc.textFile(fileName)
+          val fs = new FileStructure("root", rddTF)
+          val rddOfHeadings = myParser.parse(fs).flatMap(_.headings)
+          val howManyEmptyCategoryIds = rddOfHeadings.filter(_.category.trim.isEmpty).count()
+          val propOfNonEmpties = 100 - (((howManyEmptyCategoryIds * 100): Double) / fileInfo.eventsItContains)
+          if (howManyEmptyCategoryIds > 0)
+            info(s" ====> There are ${howManyEmptyCategoryIds} (out of ${fileInfo.eventsItContains}) events without category on heading on ${fileInfo.name}")
+          withClue(s"On ${fileInfo.name}") { assert(propOfNonEmpties > 75) }
+      }
+    } finally {
+      sc.stop()
+      System.clearProperty("spark.master.port")
+    }
+  }
+
 }
 
 // end of file
