@@ -28,8 +28,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     val myParser = new Parser()
 
     try {
-      val rddF = sc.textFile(nonExistentFileName)
-      val rdd = myParser.parse(sc, HDFSFileName(name = nonExistentFileName))
+      // TODO: clean syntax
+      val rddTF = sc.textFile(nonExistentFileName)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val rdd = myParser.parse(fs)
       val theCount = catching(classOf[Exception]).opt { rdd.count() }.getOrElse(0L)
       assert(theCount == 0)
     } finally {
@@ -53,8 +55,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
 
     HDFS.writeToFile(fileName = fileNameCreated, eventsXML.toString())
     try {
-      val rddF = sc.textFile(fileNameCreated)
-      val rdd = myParser.parse(sc, HDFSFileName(name = fileNameCreated))
+      // TODO: clean syntax
+      val rddTF = sc.textFile(fileNameCreated)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val rdd = myParser.parse(fs)
       val theCount = rdd.count()
       assert(theCount == 2)
     } finally {
@@ -80,8 +84,9 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     HDFS.writeToFile(fileName = fileNameCreated, eventsXML.toString())
     try {
       // TODO: clean syntax
-      val rddF = sc.textFile(fileNameCreated)
-      val rdd = myParser.parse(sc, HDFSFileName(name = fileNameCreated))
+      val rddTF = sc.textFile(fileNameCreated)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val rdd = myParser.parse(fs)
       val theCount = rdd.count()
       assert(theCount == 1)
     } finally {
@@ -106,8 +111,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
 
     HDFS.writeToFile(fileName = fileNameCreated, eventsXML.toString())
     try {
-      val rddF = sc.textFile(fileNameCreated)
-      val rdd = myParser.parse(sc, HDFSFileName(name = fileNameCreated))
+      // TODO: clean syntax
+      val rddTF = sc.textFile(fileNameCreated)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val rdd = myParser.parse(fs)
       val theCount = rdd.count()
       assert(theCount == 1)
     } finally {
@@ -130,9 +137,8 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
 
     HDFS.writeToFile(fileName = fileNameCreated, eventsXML.toString())
     try {
-      val rddF = sc.textFile(fileNameCreated)
-      val rdd = myParser.parse(sc, HDFSFileName(name = fileNameCreated)).groupBy(_.events.map(_.basicInfo.id))
-      // val rdd = myParser.parse(new XMLPiecePerLine("root", rddF)).groupBy(_.value.basicInfo.id)
+      val rddTF = sc.textFile(fileNameCreated)
+      val rdd = myParser.parse(new XMLPiecePerLine("root", rddTF)).groupBy(_.events.map(_.basicInfo.id))
       val theCount = rdd.count()
       assert(theCount == 1)
     } finally {
@@ -154,7 +160,7 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     val myParser = new Parser()
     try {
       val rddF = sc.textFile(fileNameCreated)
-      val rdd = myParser.parse(sc, HDFSFileName(name = fileNameCreated)).groupBy(_.events.map(_.basicInfo.id))
+      val rdd = myParser.parse(new XMLPiecePerLine("root", rddF)).groupBy(_.events.map(_.basicInfo.id))
       val theCount = rdd.count()
       assert(theCount == 3)
     } finally {
@@ -192,7 +198,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     val fileNameCreated = s"${util.Base.String.generateRandom(10)}.xml"
     HDFS.writeToFile(fileName = fileNameCreated, xmlOneEventPerLine(List(anEvent)))
     try {
-      val rddOfSetOfHeadings = myParser.parse(sc, HDFSFileName(name = fileNameCreated)).map(_.headings)
+      // TODO: clean syntax
+      val rddTF = sc.textFile(fileNameCreated)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val rddOfSetOfHeadings = myParser.parse(fs).map(_.headings)
       assert(rddOfSetOfHeadings.collect().head.size == 2)
     } finally {
       HDFS.rm(fileNameCreated)
@@ -226,7 +235,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     val fileNameCreated = s"${util.Base.String.generateRandom(10)}.xml"
     HDFS.writeToFile(fileName = fileNameCreated, xmlOneEventPerLine(List(anEvent)))
     try {
-      val rddOfSetOfHeadings = myParser.parse(sc, HDFSFileName(name = fileNameCreated)).map(_.directories)
+      // TODO: clean syntax
+      val rddTF = sc.textFile(fileNameCreated)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val rddOfSetOfHeadings = myParser.parse(fs).map(_.directories)
       assert(rddOfSetOfHeadings.collect().head.size == 2)
     } finally {
       HDFS.rm(fileNameCreated)
@@ -260,8 +272,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
             val (msToWrite, rdd) =
               BaseUtil.timeInMs {
                 val (msToParse, rdd) = BaseUtil.timeInMs {
-                  val rddF = sc.textFile(fileName)
-                  myParser.parse(sc, HDFSFileName(name = fileName))
+                  // TODO: clean syntax
+                  val rddTF = sc.textFile(fileName)
+                  val fs = new XMLPiecePerLine("root", rddTF)
+                  myParser.parse(fs)
                 }.run
                 withClue(s"'${fileInfo.name}'the 'parse' took ${msToParse} ms. to run. SHOULD BE FAST, ONLY RDDs INVOLVED!!") {
                   assert(msToParse < 50)
@@ -294,7 +308,10 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
       resourceFileNamesAndNumberOfEvents.foreach {
         case (fileInfo, howManyEvents) =>
           val fileName = fileInfo.name.absoluteFileName
-          val rddOfEvents = myParser.parse(sc, HDFSFileName(name = fileName)).flatMap(_.events)
+          // TODO: clean syntax
+          val rddTF = sc.textFile(fileName)
+          val fs = new XMLPiecePerLine("root", rddTF)
+          val rddOfEvents = myParser.parse(fs).flatMap(_.events)
           val howManyEmptyEventIds = rddOfEvents.filter(_.basicInfo.id.trim.isEmpty).count()
           assert(howManyEmptyEventIds == 0)
       }
@@ -313,12 +330,15 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
       resourceFileNamesAndNumberOfEvents.foreach {
         case (fileInfo, howManyEvents) =>
           val fileName = fileInfo.name.absoluteFileName
-          val rdd = myParser.parse(sc, HDFSFileName(name = fileName))
+          // TODO: clean syntax
+          val rddTF = sc.textFile(fileName)
+          val fs = new XMLPiecePerLine("root", rddTF)
+          val rdd = myParser.parse(fs)
           val rddOfEvents = rdd.flatMap(_.events)
           val howManyEmptyTimestamps = rddOfEvents.filter(e => e.basicInfo.timestamp.trim.isEmpty).count()
-          withClue("'eventTimestamp's invalid") { assert(howManyEmptyTimestamps == 0) }
+          withClue(s"${fileInfo.name}: 'eventTimestamp's invalid") { assert(howManyEmptyTimestamps == 0) }
           val howManyInvalidTimestamps = rddOfEvents.filter(e => e.basicInfo.timestampId.value < 0).count()
-          withClue("'timestampId's invalid") { assert(howManyInvalidTimestamps == 0) }
+          withClue(s"${fileInfo.name}: 'timestampId's invalid") { assert(howManyInvalidTimestamps == 0) }
       }
     } finally {
       sc.stop()

@@ -2,6 +2,10 @@ package canpipe.parser.spark
 
 import canpipe.parser.{ RejectRule, FilterRule }
 import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import spark.util.xml.XMLPiecePerLine
+
+// Implicit conversions. See p. 5 of http://ampcamp.berkeley.edu/wp-content/uploads/2012/06/matei-zaharia-part-2-amp-camp-2012-standalone-programs.pdf
 import canpipe.parser.spark.{ Parser => SparkParser }
 import org.apache.spark.rdd.RDD
 import spark.util.wrapper.HDFSFileName
@@ -177,7 +181,10 @@ object RunParser extends Logging {
       val sc = new SparkContext()
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
       import sqlContext._
-      val tables = myParser.parse(sc, fN = HDFSFileName(hdfsFileName))
+      // TODO: clean syntax
+      val rddTF = sc.textFile(hdfsFileName)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val tables = myParser.parse(fs)
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
       val cleanedSrcFileName = fileNameNoDir.replace(" ", "").replace("-", "")
       // event table
