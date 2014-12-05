@@ -31,12 +31,9 @@ class Parser(val filterRules: Set[FilterRule]) {
    *       But I have no evidence whatsoever beyong that to suggest that *all* of them are stored that way.
    *       TODO: verify this hypothesis.
    */
-  def parse(sc: org.apache.spark.SparkContext, fN: HDFSFileName): RDD[Tables] = { // RDD[EventDetail] = {
-    // TODO: clean syntax
-    val rdd = sc.textFile(fN.name)
-    val fs = new FileStructure("root", rdd)
+  def parse(fs: FileStructure): RDD[Tables] = {
     val (t2, rp) = util.Base.timeInMs { SparkParser.parse(fs.lines) }
-    println(s"${fN.name}: parsing took ${t2} ms. Generated an RDD of Elem's")
+    println(s"Parsing took ${t2} ms. Generated an RDD of Elem's")
     //println(fN.name + " =============================") // TODO: put this with 'logger.debug'
     rp.flatMap { anXMLNode =>
       canpipe.xml.Elem(anXMLNode).map { canpipeXMLNode =>
