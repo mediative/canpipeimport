@@ -346,33 +346,6 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     }
   }
 
-  it should "yield events with proper userId, 'some' of the time" in {
-    val testName = "my test"
-    val sc = new SparkContext("local[4]", testName)
-    val myParser = new Parser()
-
-    try {
-      resourceFileNamesAndNumberOfEvents.foreach {
-        case (fileInfo, _) =>
-          val fileName = fileInfo.name.absoluteFileName
-          // TODO: clean syntax
-          val rddTF = sc.textFile(fileName)
-          val fs = new FileStructure("root", rddTF)
-          val rddOfEvents = myParser.parse(fs).flatMap(_.eventOpt)
-          val howManyEmptyUserIds = rddOfEvents.filter(_.userId.trim.isEmpty).count()
-          val propOfNonEmpties = 100 - (((howManyEmptyUserIds * 100): Double) / fileInfo.eventsItContains)
-          // test implements a sanity check: at least 30 percent of userids should be there
-          // NB: I totally invented this number by looking at a couple of XMLs.
-          withClue(s"On ${fileInfo.name}") { assert(propOfNonEmpties > 30) }
-          if (howManyEmptyUserIds > 0)
-            info(s" ====> There are ${howManyEmptyUserIds} (out of ${fileInfo.eventsItContains}) events without 'userId' on ${fileInfo.name}")
-      }
-    } finally {
-      sc.stop()
-      System.clearProperty("spark.master.port")
-    }
-  }
-
   it should "yield headings with proper category, at least 75% of the time" in {
     val testName = "my test"
     val sc = new SparkContext("local[4]", testName)
