@@ -4,7 +4,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import spark.util.wrapper.HDFSFileName
 
-trait Structure {
+trait Structure extends Serializable {
   def starter: String
   def lines: RDD[String]
 }
