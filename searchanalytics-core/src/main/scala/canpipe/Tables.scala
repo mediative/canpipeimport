@@ -17,7 +17,7 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
       def getOrEmpty(anXMLField: XMLField): String = {
         (anXMLNode.value \ anXMLField.asList) match {
           case l if l.isEmpty => ""
-          case l if (l.tail.isEmpty) => l.head
+          case l if (l.tail.isEmpty) => l.head.trim
           case l => l.mkString(start = "{", sep = ",", end = "}")
         }
       }
