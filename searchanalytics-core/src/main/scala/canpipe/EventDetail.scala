@@ -54,25 +54,6 @@ class EventDetail(
   val searchResultPerPage: String /* /root/Event/search/resultPerPage */ , val searchLatitude: String /* /root/Event/search/latitude */ ,
   val searchLongitude: String /* /root/Event/search/longitude */ ,
   /* ******************************************** */
-  /* Merchants attributes and fields */
-  val merchantId: String /* /root/Event/search/merchants/@id */ ,
-  val merchantZone: String /* /root/Event/search/merchants/@zone */ ,
-  val merchantLatitude: String /* /root/Event/search/merchants/@latitude */ ,
-  val merchantLongitude: String, /* /root/Event/search/merchants/@longitude */
-  val merchantDistance: String, /* /root/Event/search/merchants/@distance */ // TODO: when merchants are de-normalized, this field should be Long
-  val merchantDisplayPosition: String /* /root/Event/search/merchants/RHSorLHS */ ,
-  val merchantIsNonAdRollup: String /* /root/Event/search/merchants/isNonAdRollup */ , // TODO: when merchants are de-normalized, this field should be Boolean
-  val merchantRank: String /* /root/Event/search/merchants/ranking */ , // TODO: when merchants are de-normalized, this field should be Int
-  val merchantIsRelevantListing: String /* /root/Event/search/merchants/isListingRelevant */ , // TODO: when merchants are de-normalized, this field should be Boolean
-  val merchantIsRelevantHeading: String /* /root/Event/search/merchants/entry/heading/@isRelevant */ , // TODO: when merchants are de-normalized, this field should be Boolean
-  val merchantHeadingIdList: String /* /root/Event/search/merchants/entry/heading/categories */ ,
-  val merchantChannel1List: String /* /root/Event/search/merchants/entry/directories/channel1 */ ,
-  val merchantChannel2List: String /* /root/Event/search/merchants/entry/directories/channel2 */ ,
-  val productType: String /* /root/Event/search/merchants/entry/product/productType */ ,
-  val productLanguage: String /* /root/Event/search/merchants/entry/product/language */ ,
-  val productUdac: String /* /root/Event/search/merchants/entry/product/udac */ ,
-  val merchantListingType: String /* /root/Event/search/merchants/entry/listingType */ ,
-  /* ******************************************** */
   /* Search Analytics/Analysis attributes and fields */
   val searchAnalysisIsfuzzy: Boolean /* /root/Event/search/searchAnalysis/fuzzy */ ,
   val searchAnalysisIsGeoExpanded: Boolean /* /root/Event/search/searchAnalysis/geoExpanded */ ,
@@ -123,23 +104,6 @@ class EventDetail(
          | searchResultPerPage (/root/Event/search/resultPerPage) = ${searchResultPerPage},
          | searchLatitude (/root/Event/search/latitude) = ${searchLatitude},
          | searchLongitude (/root/Event/search/longitude) = ${searchLongitude},
-         | merchantId (/root/Event/search/merchants/@id) = ${merchantId},
-         | merchantZone (/root/Event/search/merchants/@zone) = ${merchantZone},
-         | merchantLatitude (/root/Event/search/merchants/@latitude) = ${merchantLatitude},
-         | merchantLongitude (/root/Event/search/merchants/@longitude) = ${merchantLongitude},
-         | merchantDistance (/root/Event/search/merchants/@distance) = ${merchantDistance},
-         | merchantDisplayPosition (/root/Event/search/merchants/RHSorLHS) = ${merchantDisplayPosition},
-         | merchantIsNonAdRollup (/root/Event/search/merchants/isNonAdRollup) = ${merchantIsNonAdRollup},
-         | merchantRank (/root/Event/search/merchants/ranking) = ${merchantRank},
-         | merchantIsRelevantListing (/root/Event/search/merchants/isListingRelevant) = ${merchantIsRelevantListing},
-         | merchantIsRelevantHeading (/root/Event/search/merchants/entry/heading/@isRelevant) = ${merchantIsRelevantHeading},
-         | merchantHeadingIdList (/root/Event/search/merchants/entry/heading/categories) = ${merchantHeadingIdList},
-         | merchantChannel1List (/root/Event/search/merchants/entry/directories/channel1) = ${merchantChannel1List},
-         | merchantChannel2List (/root/Event/search/merchants/entry/directories/channel2) = ${merchantChannel2List},
-         | productType (/root/Event/search/merchants/entry/product/productType) = ${productType},
-         | productLanguage (/root/Event/search/merchants/entry/product/language) = ${productLanguage},
-         | productUdac (/root/Event/search/merchants/entry/product/udac) = ${productUdac},
-         | merchantListingType (/root/Event/search/merchants/entry/listingType) = ${merchantListingType},
          | searchAnalysisIsfuzzy (/root/Event/search/searchAnalysis/fuzzy) = ${searchAnalysisIsfuzzy},
          | searchAnalysisIsGeoExpanded (/root/Event/search/searchAnalysis/geoExpanded) = ${searchAnalysisIsGeoExpanded},
          | searchAnalysisIsBusinessName (/root/Event/search/searchAnalysis/businessName") = ${searchAnalysisIsBusinessName},
@@ -150,7 +114,7 @@ class EventDetail(
 
   override def canEqual(that: Any): Boolean = that.isInstanceOf[EventDetail]
 
-  override def productArity: Int = 65
+  override def productArity: Int = 48
 
   @throws(classOf[IndexOutOfBoundsException])
   override def productElement(n: Int) = n match {
@@ -197,28 +161,11 @@ class EventDetail(
     case 40 => searchResultPerPage
     case 41 => searchLatitude
     case 42 => searchLongitude
-    case 43 => merchantId
-    case 44 => merchantZone
-    case 45 => merchantLatitude
-    case 46 => merchantLongitude
-    case 47 => merchantDistance
-    case 48 => merchantDisplayPosition
-    case 49 => merchantIsNonAdRollup
-    case 50 => merchantRank
-    case 51 => merchantIsRelevantListing
-    case 52 => merchantIsRelevantHeading
-    case 53 => merchantHeadingIdList
-    case 54 => merchantChannel1List
-    case 55 => merchantChannel2List
-    case 56 => productType
-    case 57 => productLanguage
-    case 58 => productUdac
-    case 59 => merchantListingType
-    case 60 => searchAnalysisIsfuzzy
-    case 61 => searchAnalysisIsGeoExpanded
-    case 62 => searchAnalysisIsBusinessName
-    case 63 => key
-    case 64 => value
+    case 43 => searchAnalysisIsfuzzy
+    case 44 => searchAnalysisIsGeoExpanded
+    case 45 => searchAnalysisIsBusinessName
+    case 46 => key
+    case 47 => value
     case _ => throw new IndexOutOfBoundsException(n.toString())
   }
 

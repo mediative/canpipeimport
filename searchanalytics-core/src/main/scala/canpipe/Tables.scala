@@ -4,6 +4,7 @@ import canpipe.xml.XMLFields._
 import canpipe.xml.{ Elem => CanpipeXMLElem }
 import util.xml.{ Field => XMLField }
 import util.xml.Base._ // among other things, brings implicits into scope
+import util.{ Base => Util }
 
 import scala.util.control.Exception._
 
@@ -12,7 +13,11 @@ import scala.util.control.Exception._
  */
 case class Tables(anXMLNode: CanpipeXMLElem) {
 
-  val (eventOpt: Option[EventDetail], headings: Set[EventsHeadingsAssociation], directories: Set[EventsDirectoriesAssociation]) = {
+  val (
+    eventOpt: Option[EventDetail],
+    headings: Set[EventsHeadingsAssociation],
+    directories: Set[EventsDirectoriesAssociation],
+    merchants: Set[EventsMerchantsAssociation]) = {
     {
       def getOrEmpty(anXMLField: XMLField): String = {
         (anXMLNode.value \ anXMLField.asList) match {
@@ -32,12 +37,7 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
       }
       // Boolean specifics:
       def parseAsBoolean(fieldName: XMLField): Option[Boolean] = {
-        getOrEmpty(fieldName).trim.toUpperCase match {
-          case "TRUE" | "1" | "T" | "TRUE" | "Y" | "YES" => Some(true)
-          case "FALSE" | "0" | "F" | "FALSE" | "N" | "NO" => Some(false)
-          case x if (x.isEmpty) => Some(false) // TODO: if field not there, assuming false. Is this correct?
-          case _ => None
-        }
+        Util.String.toBooleanOpt(getOrEmpty(fieldName)) // TODO: if field not there, assuming false. Is this correct?
       }
       def displayBooleanError(fieldNameInMap: XMLField, resultFieldName: String): Unit = {
         displayTypeError(fieldNameInMap, dstType = "Boolean", resultFieldName)
@@ -58,7 +58,21 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
       def parseAsLongOrDefault(fieldNameInMap: XMLField, resultFieldName: String): Long = {
         parseAsLong(fieldNameInMap).getOrElse { displayLongError(fieldNameInMap, resultFieldName); Long.MinValue }
       }
+      // Double specifics:
+      def parseAsDouble(fieldName: XMLField): Option[Double] = {
+        getOrEmpty(fieldName) match {
+          case s if s.isEmpty => Some(0.0) // TODO: if field not there, assuming 0.0. Is this correct?
+          case s => catching(classOf[Exception]) opt { s.toDouble }
+        }
+      }
+      def displayDoubleError(fieldNameInMap: XMLField, resultFieldName: String): Unit = {
+        displayTypeError(fieldNameInMap, dstType = "Double", resultFieldName)
+      }
+      def parseAsDoubleOrDefault(fieldNameInMap: XMLField, resultFieldName: String): Double = {
+        parseAsDouble(fieldNameInMap).getOrElse { displayDoubleError(fieldNameInMap, resultFieldName); Double.MinValue }
+      }
 
+      /* Normalize Directories */
       val dirsReturned = getOrEmpty(SEARCH_DIRECTORIESRETURNED)
       val dirIds = {
         if (dirsReturned.trim.isEmpty) {
@@ -69,6 +83,7 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
           dirsReturned.split(",").flatMap { aDir => catching(classOf[Exception]).opt { val DirectoryRegex(id, name) = aDir; id.toLong } }.toSet
         }
       }
+      /* Normalize Headings */
       val (headingsIds, headingsCats): (List[Long], List[String]) =
         (anXMLNode.value \ SEARCH_HEADING_NAME.asList) match {
           case l if l.isEmpty => (List(-1), List("")) // TODO: if no heading, spit -1L. That OK?
@@ -76,7 +91,22 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
         }
       val headingsWithCats = (headingsIds zip headingsCats).toSet
       val dirsHeadingsAndCats = for (dir <- dirIds; headingAndCat <- headingsWithCats) yield (dir, headingAndCat)
-
+      /* Normalize Merchants */
+      val merchantsOnEvent =
+        EventsMerchantsAssociation.fromStrings(eventId = getOrEmpty(EVENT_ID),
+          merchantIdsAsString = (anXMLNode.value \ MERCHANTS_ID.asList),
+          merchantRanksAsString = (anXMLNode.value \ MERCHANTS_RANKING.asList),
+          merchantDistancesAsString = (anXMLNode.value \ MERCHANTS_DISTANCE.asList),
+          merchantLongitudesAsString = (anXMLNode.value \ MERCHANTS_LONGITUDE.asList),
+          merchantLatitudesAsString = (anXMLNode.value \ MERCHANTS_LATITUDE.asList),
+          channels1 = (anXMLNode.value \ MERCHANTS_DIRECTORIES_CHANNEL1.asList),
+          channels2 = (anXMLNode.value \ MERCHANTS_DIRECTORIES_CHANNEL2.asList),
+          isNonAdRollupsAsString = (anXMLNode.value \ MERCHANTS_NONADROLLUP.asList),
+          isRelevantHeadingsAsString = (anXMLNode.value \ MERCHANTS_IS_RELEVANT_HEADING.asList),
+          isRelevantListingsAsString = (anXMLNode.value \ MERCHANTS_IS_RELEVANT_LISTING.asList),
+          displayPositions = (anXMLNode.value \ MERCHANTS_RHS_OR_LHS.asList),
+          zones = (anXMLNode.value \ MERCHANTS_ZONE.asList)).toSet
+      /* Properly treat Timestamp */
       val theTimestamp = getOrEmpty(EVENT_TIMESTAMP)
       val DateFromXMLRegex = """(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d).(\d\d\d)-(\d\d):(\d\d)""".r // TODO: put this somewhere else
       val theTimestampId =
@@ -134,25 +164,6 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
         searchLatitude = getOrEmpty(SEARCH_LATITUDE),
         searchLongitude = getOrEmpty(SEARCH_LONGITUDE),
         /* ******************************************** */
-        /* Merchants attributes and fields */
-        merchantId = getOrEmpty(MERCHANTS_ID),
-        merchantZone = getOrEmpty(MERCHANTS_ZONE),
-        merchantLatitude = getOrEmpty(MERCHANTS_LATITUDE),
-        merchantLongitude = getOrEmpty(MERCHANTS_LONGITUDE),
-        merchantDistance = getOrEmpty(MERCHANTS_DISTANCE),
-        merchantDisplayPosition = getOrEmpty(MERCHANTS_RHS_OR_LHS),
-        merchantIsNonAdRollup = getOrEmpty(MERCHANTS_NONADROLLUP),
-        merchantRank = getOrEmpty(MERCHANTS_RANKING),
-        merchantIsRelevantListing = getOrEmpty(MERCHANTS_IS_RELEVANT_LISTING),
-        merchantIsRelevantHeading = getOrEmpty(MERCHANTS_IS_RELEVANT_HEADING),
-        merchantHeadingIdList = getOrEmpty(MERCHANTS_HEADING_CATEGORIES),
-        merchantChannel1List = getOrEmpty(MERCHANTS_DIRECTORIES_CHANNEL1),
-        merchantChannel2List = getOrEmpty(MERCHANTS_DIRECTORIES_CHANNEL2),
-        productType = getOrEmpty(MERCHANTS_PRODUCT_TYPE),
-        productLanguage = getOrEmpty(MERCHANTS_PRODUCT_LANGUAGE),
-        productUdac = getOrEmpty(MERCHANTS_PRODUCT_UDAC),
-        merchantListingType = getOrEmpty(MERCHANTS_LISTING_TYPE),
-        /* ******************************************** */
         /* Search Analytics/Analysis attributes and fields */
         searchAnalysisIsfuzzy = parseAsBooleanOrFalse(SEARCHANALYSIS_ISFUZZY, "searchAnalysisIsfuzzy"),
         searchAnalysisIsGeoExpanded = parseAsBooleanOrFalse(SEARCHANALYSIS_GEOEXPANDED, "searchAnalysisIsGeoExpanded"),
@@ -161,11 +172,12 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
         value = getOrEmpty(SEARCHANALYTICS_VALUES))
 
       EventDetail.sanityCheck(firstEd) match {
-        case None => (None, Set.empty, Set.empty)
+        case None => (None, Set.empty, Set.empty, Set.empty[EventsMerchantsAssociation])
         case Some(ed) => {
           (Some(ed),
             headingsWithCats.map { case (headId, cat) => EventsHeadingsAssociation(eventId = ed.eventId, headingId = headId, category = cat) },
-            dirIds.map { dirId => EventsDirectoriesAssociation(eventId = ed.eventId, directoryId = dirId) })
+            dirIds.map { dirId => EventsDirectoriesAssociation(eventId = ed.eventId, directoryId = dirId) },
+            merchantsOnEvent)
         }
       }
 

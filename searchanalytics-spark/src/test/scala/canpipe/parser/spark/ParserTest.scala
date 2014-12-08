@@ -377,6 +377,28 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
     }
   }
 
+  it should "yield merchants with proper id" in {
+    val testName = "my test"
+    val sc = new SparkContext("local[4]", testName)
+    val myParser = new Parser()
+
+    try {
+      resourceFileNamesAndNumberOfEvents.foreach {
+        case (fileInfo, _) =>
+          val fileName = fileInfo.name.absoluteFileName
+          // TODO: clean syntax
+          val rddTF = sc.textFile(fileName)
+          val fs = new FileStructure("root", rddTF)
+          val rddOfMerchants = myParser.parse(fs).flatMap(_.merchants)
+          val howManyEmptyMerchantIds = rddOfMerchants.filter(_.merchantId <= 0L).count()
+          withClue(s" ====> There are ${howManyEmptyMerchantIds} (out of ${fileInfo.eventsItContains}) events that yielded merchants without id on ${fileInfo.name}") { assert(howManyEmptyMerchantIds == 0) }
+      }
+    } finally {
+      sc.stop()
+      System.clearProperty("spark.master.port")
+    }
+  }
+
 }
 
 // end of file

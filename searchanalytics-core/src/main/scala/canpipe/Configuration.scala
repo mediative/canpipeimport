@@ -23,5 +23,5 @@ class Configuration {
   val eventsFolders = DstFolders(workingTmp = s"${workingTmp}/events", output = s"${locationForDstFiles}/events")
   val headingsFolders = DstFolders(workingTmp = s"${workingTmp}/headings", output = s"${locationForDstFiles}/headingsXevents")
   val directoriesFolders = DstFolders(workingTmp = s"${workingTmp}/directories", output = s"${locationForDstFiles}/directoriesXevents")
-
+  val merchantsFolders = DstFolders(workingTmp = s"${workingTmp}/merchants", output = s"${locationForDstFiles}/merchantsXevents")
 }

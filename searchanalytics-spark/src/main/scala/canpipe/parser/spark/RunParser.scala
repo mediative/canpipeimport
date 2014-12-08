@@ -196,6 +196,17 @@ object RunParser {
               prefixOfFile = s"${cleanedSrcFileName}.directories",
               dirToSynchronize = globalConf.directoriesFolders.output)
           }
+        // merchants table
+        val merchants = tables.map(_.merchants).flatMap(identity(_))
+        val (timeToSaveMerchants, merchantsProperlySaved) =
+          util.Base.timeInMs {
+            saveRDDAsParquetAndCleanUp(
+              sqlContext,
+              thisRDD = merchants,
+              workingDir = globalConf.merchantsFolders.workingTmp,
+              prefixOfFile = s"${cleanedSrcFileName}.merchants",
+              dirToSynchronize = globalConf.merchantsFolders.output)
+          }
         println(s"Saving EVENTS took ${timeToSaveEvents} ms. (added to location = ${globalConf.eventsFolders.output})")
         if (headingsProperlySaved)
           println(s"HEADINGS saved in ${timeToSaveHeadings} ms. (added to location = ${globalConf.headingsFolders.output})")
@@ -205,6 +216,10 @@ object RunParser {
           println(s"DIRECTORIES saved in ${timeToSaveDirectories} ms. (added to location = ${globalConf.directoriesFolders.output})")
         else
           println("DIRECTORIES **NOT SAVED**")
+        if (merchantsProperlySaved)
+          println(s"MERCHANTS saved in ${timeToSaveMerchants} ms. (added to location = ${globalConf.merchantsFolders.output})")
+        else
+          println("MERCHANTS **NOT SAVED**")
       }
     }
 
