@@ -1,6 +1,5 @@
 package canpipe.parser.spark
 
-import canpipe.CanpipeFileName
 import canpipe.parser.{ RejectRule, FilterRule }
 import org.apache.spark.SparkContext
 import canpipe.parser.spark.{ Parser => SparkParser }
