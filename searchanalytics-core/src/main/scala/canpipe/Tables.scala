@@ -87,8 +87,18 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
       val (headingsIds, headingsCats): (List[Long], List[String]) =
         (anXMLNode.value \ SEARCH_HEADING_NAME.asList) match {
           case l if l.isEmpty => (List(-1), List("")) // TODO: if no heading, spit -1L. That OK?
-          case _ => ((anXMLNode.value \ SEARCH_HEADING_NAME.asList).map(_.toLong), anXMLNode.value \ SEARCH_HEADINGRELEVANCE.asList)
+          case headingsAsString => {
+            val headingsAndRelevance = headingsAsString zip anXMLNode.value \ SEARCH_HEADINGRELEVANCE.asList
+            headingsAndRelevance.map {
+              case (name, rel) =>
+                (
+                  catching(classOf[NumberFormatException]).opt { Some(name.toLong) }.getOrElse({
+                    catching(classOf[NumberFormatException]).opt { (name.substring(0, name.length - 1)).toLong }
+                  }), rel)
+            }.filter(_._1.isDefined).map { case (nameOpt, rel) => (nameOpt.get, rel) }.unzip
+          }
         }
+
       val headingsWithCats = (headingsIds zip headingsCats).toSet
       val dirsHeadingsAndCats = for (dir <- dirIds; headingAndCat <- headingsWithCats) yield (dir, headingAndCat)
       /* Normalize Merchants */
