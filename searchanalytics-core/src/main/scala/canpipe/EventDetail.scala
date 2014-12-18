@@ -9,6 +9,8 @@ import scala.util.control.Exception._
 import XMLFields._
 import util.xml.{ Field => XMLField }
 import canpipe.xml.{ Elem => CanpipeXMLElem }
+import util.reader.{ Base => Readers }
+import Readers._
 
 case class EventDetail(
   basicInfo: EventDetail.BasicInfo,
