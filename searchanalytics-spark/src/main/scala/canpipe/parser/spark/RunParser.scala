@@ -3,11 +3,14 @@ package canpipe.parser.spark
 import canpipe.parser.{ RejectRule, FilterRule }
 import org.apache.spark.SparkContext
 import canpipe.parser.spark.{ Parser => SparkParser }
+import org.apache.spark.rdd.RDD
+import spark.CanpipeFileName
+import spark.util.xml.XMLPiecePerLine
 import spark.util.{ Base => SparkUtil }
-import util.{ Base => BaseUtil }
+import util.{ Base => BaseUtil, Logging }
 import org.apache.hadoop.fs.Path
 
-object RunParser {
+object RunParser extends Logging {
 
   private val FILENAMELABEL = "hdfsfilename"
   def parseArgs(list: List[String]): Map[String, String] = {
@@ -18,7 +21,7 @@ object RunParser {
         case "--hdfsfilename" :: value :: tail =>
           loop(map + (FILENAMELABEL -> value), tail)
         case l =>
-          println(s"Unknown ${if (isSwitch(l.head)) "switch" else "value"} " + l.head)
+          logger.info(s"Unknown ${if (isSwitch(l.head)) "switch" else "value"} " + l.head)
           loop(map, l.tail)
       }
     }
@@ -59,13 +62,13 @@ object RunParser {
     val pairsFailing =
       synchronizeMainFolderMvFiles(mainFolder, sourceFolder).foldLeft(Set.empty[(String, String)]) {
         case (pairsFailing, (srcFileName, dstFileName)) =>
-          println(s"Trying to mv from ${srcFileName} to ${dstFileName}")
+          logger.debug(s"Trying to mv from ${srcFileName} to ${dstFileName}")
           if (SparkUtil.HDFS.mv(srcFileName, dstFileName)) pairsFailing
           else pairsFailing + Tuple2(srcFileName, dstFileName)
       }
     pairsFailing.foreach {
       case (srcFileName, dstFileName) =>
-        println(s"Impossible to mv from '${srcFileName}' to '${dstFileName}")
+        logger.error(s"Impossible to mv from '${srcFileName}' to '${dstFileName}")
     }
     (pairsFailing.size == 0)
   }
@@ -74,30 +77,26 @@ object RunParser {
     if (synchronizeMainFolder(mainFolder, sourceFolder)) {
       SparkUtil.HDFS.rm(sourceFolder)
     } else {
-      println(s"Something exploded while synchronizing '${mainFolder}' with info from '${sourceFolder}'")
+      logger.error(s"Something exploded while synchronizing '${mainFolder}' with info from '${sourceFolder}'")
       false
     }
   }
 
-  private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String) = {
-    import sqlContext._
-
+  private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
     def sanityCheckParquetGeneration(whereWasItSaved: String): Boolean = {
       // Parquet files are self-describing so the schema is preserved.
       val rddFromParquetFile = sqlContext.parquetFile(whereWasItSaved)
       //Parquet files can also be registered as tables and then used in SQL statements.
       val tableName = s"${prefixOfFile}.table"
       rddFromParquetFile.registerAsTable(tableName)
-      val allRowsInTable = sql(s"SELECT * FROM ${tableName}")
+      val allRowsInTable = sqlContext.sql(s"SELECT * FROM ${tableName}")
       val howManyRowsInTable = allRowsInTable.count()
       val howManyEntriesInRDD = thisRDD.count()
       //
       if (howManyEntriesInRDD != howManyRowsInTable) {
-        // TODO: change this to 'error'
-        println(s"Something wrong ==> there are ${howManyEntriesInRDD} in RDD and ${howManyRowsInTable} in resulting table")
+        logger.error(s"Something wrong ==> there are ${howManyEntriesInRDD} in RDD and ${howManyRowsInTable} in resulting table")
       } else {
-        // TODO: change this to 'info'
-        println(s"Just successfully saved ${howManyEntriesInRDD} entries in Parquet file ${whereWasItSaved}")
+        logger.info(s"Just successfully saved ${howManyEntriesInRDD} entries in Parquet file ${whereWasItSaved}")
       }
       (howManyEntriesInRDD == howManyRowsInTable)
     }
@@ -112,7 +111,35 @@ object RunParser {
     }
   }
 
-  // TODO: replace all 'println' by writing to Spark logs
+  private[spark] def saveEventsRDDAsParquetAndCleanUp(sc: SparkContext, sqlContext: org.apache.spark.sql.SQLContext, eventsRDD: RDD[EventDetail], workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
+    def sanityCheckParquetGeneration(whereWasItSaved: String): Boolean = {
+      // Parquet files are self-describing so the schema is preserved.
+      val rddFromParquetFile = sqlContext.parquetFile(whereWasItSaved)
+      //Parquet files can also be registered as tables and then used in SQL statements.
+      val tableName = s"${prefixOfFile}.table"
+      rddFromParquetFile.registerAsTable(tableName)
+      val allRowsInTable = sqlContext.sql(s"SELECT * FROM ${tableName}")
+      val howManyRowsInTable = allRowsInTable.count()
+      val howManyEntriesInRDD = eventsRDD.count()
+      //
+      if (howManyEntriesInRDD != howManyRowsInTable) {
+        logger.error(s"Something wrong ==> there are ${howManyEntriesInRDD} in RDD and ${howManyRowsInTable} in resulting table")
+      } else {
+        logger.info(s"Just successfully saved ${howManyEntriesInRDD} entries in Parquet file ${whereWasItSaved}")
+      }
+      (howManyEntriesInRDD == howManyRowsInTable)
+    }
+
+    val parquetFileName = s"${workingDir}/${prefixOfFile}.parquet"
+    // clean it, if present:
+    SparkUtil.HDFS.rm(parquetFileName)
+    EventDetail.saveAsParquet(sc, parquetFileName, eventsRDD, force = true)
+    // sanity check:
+    if (sanityCheckParquetGeneration(whereWasItSaved = parquetFileName)) {
+      synchronizeMainFolderAndCleanSource(mainFolder = dirToSynchronize, sourceFolder = parquetFileName)
+    }
+  }
+
   def main(args: Array[String]) {
     // TODO: put all these constants in a config file and/or read them from parameters in call
     val HDFS_ROOT_LOCATION = "/source/canpipe/parquet" // root hdfs directory where data will live, once generated
@@ -121,7 +148,7 @@ object RunParser {
     val HDFS_EVENTS_LOCATION = s"${HDFS_ROOT_LOCATION}/events" // directory where events will live, once generated
     val argsParsed = parseArgs(args.toList)
     if (!argsParsed.contains(FILENAMELABEL)) {
-      println("Usage: RunParser [--hdfsfilename filename]")
+      logger.info("Usage: RunParser [--hdfsfilename filename]")
     } else {
       val hdfsFileName = argsParsed.get(FILENAMELABEL).get // 'get' will never fail, because of 'if'
       // define filtering rules for this XML:
@@ -147,11 +174,18 @@ object RunParser {
       //
       val sc = new SparkContext()
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-      import sqlContext._
-      val allEvents = myParser.parseEventGroup(events = EventGroupFromHDFSFile(sc, hdfsFileName))
+      import sqlContext.createSchemaRDD
+      // TODO: clean syntax
+      val rddF = sc.textFile(hdfsFileName)
+      val allEvents = myParser.parse(new XMLPiecePerLine("root", rddF))
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
       val cleanedFileName = fileNameNoDir.replace(" ", "").replace("-", "")
-      saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
+      val (timeToSave, _) =
+        util.Base.timeInMs {
+          saveEventsRDDAsParquetAndCleanUp(sc, sqlContext, allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
+          // saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
+        }.run
+      logger.info(s"Saving took ${timeToSave} ms.!!!")
     }
 
   }

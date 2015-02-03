@@ -1,13 +1,29 @@
 package util
 
-// import com.typesafe.scalalogging.Logging
-// import com.typesafe.scalalogging.slf4j.StrictLogging
+import scalaz.{ Writer }
 
-object Base { // extends Logging {
+object Base {
 
   def getCurrentTimeStamp: java.sql.Timestamp = {
     new java.sql.Timestamp(java.util.Calendar.getInstance().getTime.getTime)
   }
+
+  private def measureTime[A](getTime: () => Long)(block: => A): scalaz.Writer[Long, A] = {
+    lazy val (executionTime, result) = {
+      val t0 = getTime()
+      val result = block
+      (getTime() - t0, result)
+    }
+    Writer(executionTime, result)
+  }
+
+  /*
+  def timeInMs[R](block: => R): (Long, R) = measureTime(System.currentTimeMillis)(block).run
+  def timeInNanoSecs[R](block: => R): (Long, R) = measureTime(System.nanoTime)(block).run
+  */
+  def timeInMs[R](block: => R): Writer[Long, R] = measureTime(System.currentTimeMillis)(block)
+  def timeInNanoSecs[R](block: => R): Writer[Long, R] = measureTime(System.nanoTime)(block)
+
   /**
    * Used for reading/writing to database, files, etc.
    * Code From the book "Beginning Scala"
@@ -20,29 +36,6 @@ object Base { // extends Logging {
 
     def generateRandom(length: Int): String = scala.util.Random.alphanumeric.take(length).mkString("")
 
-  }
-
-  object XML {
-    // TODO: I reckon this can be implemented using a Stack (http://www.scala-lang.org/api/current/index.html#scala.collection.mutable.Stack)
-    case class XPath(s: String) {
-      def asString = s
-    }
-    object XPath {
-      private[util] val SEP = "/"
-      private[util] def fromReverseNameList(reverseNameList: List[String]): String =
-        reverseNameList.reverse.mkString(start = SEP, sep = SEP, end = "")
-      private[util] def toReverseNameList(s: String): List[String] = {
-        { if (s.startsWith(SEP)) s.substring(1) else s }.split(SEP).reverse.toList
-      }
-      // creates a 'root'
-      def fromRoot(): XPath = fromRoot("root")
-      def fromRoot(rootName: String): XPath = new XPath(SEP + rootName)
-      // def apply(s: String): XPath = { if (s.startsWith(SEP)) (new XPath(s)) else (new XPath(SEP + s)) }
-      def add(aPath: XPath, aPart: String) = XPath(s"${aPath.s}${SEP}${aPart}")
-      def removeLast(aPath: XPath) = {
-        XPath(fromReverseNameList(toReverseNameList(aPath.s).tail))
-      }
-    }
   }
 
 }

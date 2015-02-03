@@ -1,16 +1,18 @@
 package spark.util
 
-// TODO: add this ==> import com.typesafe.scalalogging.slf4j.StrictLogging
+import java.io.PrintWriter
+
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs._
+import util.Base._
+import util.Logging
 
 /**
  * Several Utilities.
  */
 // TODO: since I am using this on a distributed environment, do I need to make it Serializable?
-// TODO: replace all 'println' by 'logger.error'
 // Read on: https://spark.apache.org/docs/latest/tuning.html
-object Base { // TODO: add this ==> extends StrictLogging {
+object Base extends Logging {
 
   /**
    * Protects the call on a function for the case where an Exception is thrown.
@@ -54,7 +56,7 @@ object Base { // TODO: add this ==> extends StrictLogging {
       try {
         val p = new Path(folderName)
         if (!getFileSystem.getFileStatus(p).isDir) {
-          println(s"${folderName} is *not* a folder")
+          logger.debug(s"${folderName} is *not* a folder")
           Set.empty
         } else {
           getFileSystem.listStatus(new Path(folderName)).map { status =>
@@ -68,7 +70,7 @@ object Base { // TODO: add this ==> extends StrictLogging {
         }
       } catch {
         case e: Exception => {
-          println(s"Check of file ${folderName}: ${e.getMessage}")
+          logger.error(s"Check of file ${folderName}: ${e.getMessage}")
           Set.empty
         }
       }
@@ -83,7 +85,7 @@ object Base { // TODO: add this ==> extends StrictLogging {
      */
     private[util] def fileExists(fileOrDirectoryName: String, asAFolder: Boolean): Boolean = {
       val fs = getFileSystem
-      val noExceptionCheck = manageOnException[Path, Boolean](fs.exists(_), e => println(s"Check of file ${fileOrDirectoryName}: ${e.getMessage}")) _
+      val noExceptionCheck = manageOnException[Path, Boolean](fs.exists(_), e => logger.debug(s"Check of file ${fileOrDirectoryName}: ${e.getMessage}")) _
       val p = new Path(fileOrDirectoryName)
       noExceptionCheck(p).getOrElse(false) && (!asAFolder || fs.getFileStatus(p).isDir)
     }
@@ -101,7 +103,7 @@ object Base { // TODO: add this ==> extends StrictLogging {
         getFileSystem.rename(new Path(fileNameSrc), new Path(fileNameDst))
       } catch {
         case e: Exception => {
-          println(s"Move ${fileNameSrc} => ${fileNameDst}: ${e.getMessage}")
+          logger.error(s"Move ${fileNameSrc} => ${fileNameDst}: ${e.getMessage}")
           false
         }
       }
@@ -120,6 +122,21 @@ object Base { // TODO: add this ==> extends StrictLogging {
         noExceptionDelete(new Path(fileName)).isDefined
       }
       !fileExists(fileName) && !directoryExists(fileName)
+    }
+
+    def writeToFile(fileName: String, what: String): Boolean = {
+      try {
+        val output = FileSystem.get(new Configuration()).create(new Path(fileName))
+        using(new PrintWriter(output)) { writer =>
+          writer.write(what)
+        }
+        true
+      } catch {
+        case e: Exception => {
+          logger.error(s"Error: ${e.getMessage}")
+          false
+        }
+      }
     }
 
   }

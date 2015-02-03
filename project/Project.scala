@@ -28,6 +28,7 @@ object SearchAnalyticsBuild extends Build {
     "org.scalaz" %% "scalaz-core" % "7.0.6",
     "com.chuusai" % "shapeless" % "2.0.0" cross CrossVersion.full,
     "org.scalatest" %% "scalatest" % "2.1.6" % "test,it",
+    "org.scalacheck" %% "scalacheck" % "1.12.1" % "test",
     "junit" % "junit" % "4.10" % "test,it",
     "org.mockito" % "mockito-core" % "1.9.0" % "test,it"
   )
@@ -114,7 +115,7 @@ object SearchAnalyticsBuild extends Build {
     .configs(IntegrationTest)
     .settings(hadoopSettings: _*)
     .settings(testOptions in IntegrationTest := Seq(Tests.Filter(s => s.contains("Test"))))
-    .settings(parallelExecution in IntegrationTest := false)
+    .settings(parallelExecution in Test := false)
     .settings(SbtStartScript.startScriptForClassesSettings: _*)
     .dependsOn(core)
 
