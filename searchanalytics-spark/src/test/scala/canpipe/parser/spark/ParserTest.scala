@@ -357,7 +357,7 @@ class ParserTest extends FlatSpec with BeforeAndAfter {
           val fileName = fileInfo.name.absoluteFileName
           // TODO: clean syntax
           val rddTF = sc.textFile(fileName)
-          val fs = new FileStructure("root", rddTF)
+          val fs = new XMLPiecePerLine("root", rddTF)
           val rddOfHeadings = myParser.parse(fs).flatMap(_.headings)
           val howManyEmptyCategoryIds = rddOfHeadings.filter(_.category.trim.isEmpty).count()
           val propOfNonEmpties = 100 - (((howManyEmptyCategoryIds * 100): Double) / fileInfo.eventsItContains)
