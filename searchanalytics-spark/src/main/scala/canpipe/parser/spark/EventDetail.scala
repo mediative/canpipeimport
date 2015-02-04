@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import spark.util.{ Base => SparkUtil }
 import util.Logging
-import canpipe.{ EventDetail => BasicEventDetail }
+import canpipe.{ EventDetail => BasicEventDetail, Tables }
 import util.wrapper.Wrapper
 
 // Class used to save data as Parquet. Contains only primitive types, as guided by
@@ -208,8 +208,8 @@ case class EventDetail(value: BasicEventDetail) extends Wrapper[BasicEventDetail
 
 object EventDetail extends Logging {
 
-  def apply(anXMLNode: CanpipeXMLElem): Seq[EventDetail] = {
-    BasicEventDetail(anXMLNode).map(new EventDetail(_))
+  def apply(anXMLNode: CanpipeXMLElem): Option[EventDetail] = {
+    Tables(anXMLNode).events.map(new EventDetail(_))
   }
 
   def saveAsParquet(sc: SparkContext, parquetFileName: String, c: RDD[EventDetail], force: Boolean = false): Boolean = {

@@ -1,16 +1,7 @@
 package canpipe
 
-import util.errorhandler.Base.GenericHandler
-import util.types.reader.Base.ReadSym
-import util.xml.Base._
-import canpipe.xml.XMLFields
 import util.Logging
-import util.wrapper.Wrapper
-
 import scala.util.control.Exception._
-import XMLFields._
-import util.xml.{ Field => XMLField }
-import canpipe.xml.{ Elem => CanpipeXMLElem }
 
 case class EventDetail(
   basicInfo: EventDetail.BasicInfo,
@@ -18,7 +9,6 @@ case class EventDetail(
   searchInfo: EventDetail.SearchInfo,
   merchantInfo: EventDetail.MerchantsInfo,
   searchAnalysis: EventDetail.SearchAnalysis,
-  /* ******************************************** */
   key: String,
   value: String) extends Serializable {
 
@@ -42,13 +32,15 @@ object EventDetail extends Logging {
     type Language = Value
     val EN, FR = Value
     def apply(aLangAsString: String): Option[Language] = {
-      (aLangAsString.trim.toUpperCase.substring(0, 2) match {
-        case "FR" => Some(FR)
-        case "EN" => Some(EN)
-        case _ =>
-          logger.error(s"Language '${aLangAsString}' is not recognized")
-          None
-      })
+      val upperCasedLang = aLangAsString.trim.toUpperCase
+      if (upperCasedLang.length < 2) None
+      else {
+        (upperCasedLang.substring(0, 2) match {
+          case "FR" => Some(FR)
+          case "EN" => Some(EN)
+          case _ => None
+        })
+      }
     }
   }
   import Language._
@@ -106,10 +98,13 @@ object EventDetail extends Logging {
                       siteLanguageOpt: Option[Language],
                       userId: String, apiKey: String, userSessionId: String, transactionDuration: Long,
                       isResultCached: Boolean, referrer: String, pageName: String, requestUri: String): Option[BasicInfo] = {
-      timestampIdOpt.flatMap { tId =>
-        siteLanguageOpt.map { lang =>
-          new BasicInfoImpl(
-            id, timestamp, tId, site, lang, userId, apiKey, userSessionId, transactionDuration, isResultCached, referrer, pageName, requestUri)
+      if (transactionDuration < 0) None
+      else {
+        timestampIdOpt.flatMap { tId =>
+          siteLanguageOpt.map { lang =>
+            new BasicInfoImpl(
+              id, timestamp, tId, site, lang, userId, apiKey, userSessionId, transactionDuration, isResultCached, referrer, pageName, requestUri)
+          }
         }
       }
     }
@@ -217,137 +212,20 @@ object EventDetail extends Logging {
     isByBusinessName: Boolean) extends Serializable
 
   /**
-   * TODO
-   * @param aMap
+   * TODO: write this.
+   * @param e
    * @return
    */
-  def apply(anXMLNode: CanpipeXMLElem): Seq[EventDetail] = {
-    def getOrEmpty(anXMLField: XMLField): String = {
-      (anXMLNode.value \ anXMLField.asList).mkString(",")
-    }
-
-    // Readers helpers:
-    object FieldReader extends Logging {
-      import util.errorhandler.Base.{ LongHandler, IntHandler, DoubleHandler, BooleanHandler }
-      import util.types.reader.Base.{ LongReader, IntReader, DoubleReader, BooleanReader }
-      def read[T](field: util.xml.Field)(implicit theReader: ReadSym[T], errHandler: GenericHandler[T]): T = {
-        val fieldValue = getOrEmpty(field)
-        errHandler.handle(theReader.read(fieldValue)).left.map { aMsg => s"${field.asString} incorrectly set to '${fieldValue}': ${aMsg}" } match {
-          case Left(errMsg) =>
-            logger.error(errMsg); theReader.default
-          case Right(v) => v
-        }
-      }
-    }
-
-    def fillEventDetailWithPrototype(firstEd: EventDetail,
-                                     aDirectoryId: Long,
-                                     aHeading: Long,
-                                     itsCategory: String): EventDetail = {
-      firstEd.copy(basicInfo = BasicInfo(
-        id = firstEd.basicInfo.id,
-        site = firstEd.basicInfo.site,
-        siteLanguage = firstEd.basicInfo.siteLanguage,
-        userId = firstEd.basicInfo.userId,
-        apiKey = firstEd.basicInfo.apiKey,
-        userSessionId = firstEd.basicInfo.userSessionId,
-        transactionDuration = firstEd.basicInfo.transactionDuration,
-        isResultCached = firstEd.basicInfo.isResultCached,
-        referrer = firstEd.basicInfo.referrer,
-        pageName = firstEd.basicInfo.pageName,
-        requestUri = firstEd.basicInfo.requestUri,
-        timestamp = firstEd.basicInfo.timestamp,
-        timestampId = firstEd.basicInfo.timestampId))
-    }
-
-    val dirsReturned = getOrEmpty(directoriesReturned)
-    val dirIds = {
-      if (dirsReturned.trim.isEmpty) {
-        Set(-1L) // TODO: NB = when directory does not match anything, the value in table will be -1L. That OK?
-      } else {
-        // 'dirsReturned' look like this: 107553:One Toronto Core West,107556:One Toronto Core SE,107555:One Toronto Core Ctr,107554:One Toronto Core NE
-        val DirectoryRegex = """(\d*):(.*)""".r // TODO: put this somewhere else
-        dirsReturned.split(",").flatMap { aDir => catching(classOf[Exception]).opt { val DirectoryRegex(id, name) = aDir; id.toLong } }.toSet
-      }
-    }
-    val (headingsIds, headingsCats): (Seq[Long], Seq[String]) =
-      (anXMLNode.value \ headingId.asList) match {
-        case l if l.isEmpty => (List(-1), List("")) // TODO: if no heading, spit -1L. That OK?
-        case _ => ((anXMLNode.value \ headingId.asList).map(_.toLong), (anXMLNode.value \ headingRelevance.asList))
-      }
-    val headingsWithCats = (headingsIds zip headingsCats).toSet
-    val dirsHeadingsAndCats = for (dir <- dirIds; headingAndCat <- headingsWithCats) yield (dir, headingAndCat)
-
-    BasicInfo(
-      id = getOrEmpty(eventId),
-      timestamp = getOrEmpty(eventTimestamp),
-      site = getOrEmpty(eventSite),
-      siteLanguage = getOrEmpty(eventSiteLanguage),
-      userId = getOrEmpty(userId),
-      apiKey = getOrEmpty(apiKey),
-      userSessionId = getOrEmpty(userSessionId),
-      transactionDuration = FieldReader.read[Long](transactionDuration),
-      isResultCached = FieldReader.read[Boolean](isResultCached),
-      referrer = getOrEmpty(eventReferrer),
-      pageName = getOrEmpty(pageName),
-      requestUri = getOrEmpty(requestUri)).map { baseInfo =>
-        val firstEd = new EventDetail(
-          basicInfo = baseInfo,
-          userInfo = User(
-            ip = getOrEmpty(userIP), agent = getOrEmpty(userAgent),
-            isRobot = FieldReader.read[Boolean](userIsRobot),
-            location = getOrEmpty(userLocation), browser = getOrEmpty(userBrowser)),
-          searchInfo = new SearchInfo(
-            id = getOrEmpty(searchId), what = getOrEmpty(searchWhat), where = getOrEmpty(searchWhere), resultCount = getOrEmpty(searchResultCount),
-            whatResolved = getOrEmpty(searchWhatResolved),
-            isDisambiguation = FieldReader.read[Boolean](searchIsDisambiguation),
-            isSuggestion = FieldReader.read[Boolean](searchIsSuggestion),
-            successful = FieldReader.read[Boolean](searchFailedOrSuccess),
-            hasRHSListings = FieldReader.read[Boolean](searchHasRHSListings),
-            hasNonAdRollupListings = FieldReader.read[Boolean](searchHasNonAdRollupListings),
-            calledBing = FieldReader.read[Boolean](searchIsCalledBing),
-            searchGeoOrDir = getOrEmpty(searchGeoOrDir), categoryId = getOrEmpty(categoryId),
-            tierId = getOrEmpty(tierId),
-            tierCount = FieldReader.read[Long](tierCount),
-            geoName = getOrEmpty(searchGeoName), geoType = getOrEmpty(searchGeoType),
-            geoPolygonIds = getOrEmpty(searchGeoPolygonIds), tierUdacCountList = getOrEmpty(tierUdacCountList),
-            directoryId = -1L, headingId = -1L, headingRelevance = "",
-            searchType = getOrEmpty(searchType),
-            resultPage = FieldReader.read[Int](searchResultPage),
-            resultPerPage = FieldReader.read[Int](searchResultPerPage),
-            searchLatitude = FieldReader.read[Double](searchLatitude),
-            searchLongitude = FieldReader.read[Double](searchLongitude)),
-          merchantInfo = MerchantsInfo(
-            id = getOrEmpty(merchantId),
-            zone = getOrEmpty(merchantZone),
-            latitude = getOrEmpty(merchantLatitude),
-            longitude = getOrEmpty(merchantLongitude),
-            distance = getOrEmpty(merchantDistance),
-            displayPosition = getOrEmpty(merchantDisplayPosition),
-            isNonAdRollup = getOrEmpty(merchantIsNonAdRollup),
-            rank = getOrEmpty(merchantRank),
-            isRelevantListing = getOrEmpty(merchantIsRelevantListing),
-            isRelevantHeading = getOrEmpty(merchantIsRelevantHeading),
-            headingIdList = getOrEmpty(merchantHeadingIdList),
-            channel1List = getOrEmpty(merchantChannel1List),
-            channel2List = getOrEmpty(merchantChannel2List),
-            productType = getOrEmpty(productType),
-            productLanguage = getOrEmpty(productLanguage),
-            productUdac = getOrEmpty(productUdac),
-            listingType = getOrEmpty(merchantListingType)),
-          searchAnalysis = SearchAnalysis(
-            isFuzzy = FieldReader.read[Boolean](searchAnalysisIsfuzzy),
-            isGeoExpanded = FieldReader.read[Boolean](searchAnalysisIsGeoExpanded),
-            isByBusinessName = FieldReader.read[Boolean](searchAnalysisIsBusinessName)),
-          /* ******************************************** */
-          key = getOrEmpty(key),
-          value = getOrEmpty(value))
-        dirsHeadingsAndCats.foldLeft(Seq.empty[EventDetail]) {
-          case (listOfEventOpts, (aDirectoryId, (aHeading, itsCategory))) =>
-            fillEventDetailWithPrototype(firstEd, aDirectoryId, aHeading, itsCategory) +: listOfEventOpts
-        }
-      }.getOrElse(Seq.empty)
-
+  private[canpipe] def sanityCheck(e: EventDetail): Option[EventDetail] = {
+    // TODO: following structure sucks.
+    val importantFields = List(
+      ("eventId", e.basicInfo.id.isEmpty),
+      ("eventTimestamp", e.basicInfo.timestamp.isEmpty))
+    importantFields.
+      find { case (_, errorCondition) => errorCondition }.
+      map { case (fieldName, _) => fieldName }.
+      map { fieldName => println(s"${fieldName} is empty"); None }. // TODO: logger.error
+      getOrElse(Some(e))
   }
 
 }

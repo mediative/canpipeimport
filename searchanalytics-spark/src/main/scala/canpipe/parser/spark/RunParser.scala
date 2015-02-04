@@ -2,10 +2,13 @@ package canpipe.parser.spark
 
 import canpipe.parser.{ RejectRule, FilterRule }
 import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import spark.util.xml.XMLPiecePerLine
+
+// Implicit conversions. See p. 5 of http://ampcamp.berkeley.edu/wp-content/uploads/2012/06/matei-zaharia-part-2-amp-camp-2012-standalone-programs.pdf
 import canpipe.parser.spark.{ Parser => SparkParser }
 import org.apache.spark.rdd.RDD
-import spark.CanpipeFileName
-import spark.util.xml.XMLPiecePerLine
+import spark.util.wrapper.HDFSFileName
 import spark.util.{ Base => SparkUtil }
 import util.{ Base => BaseUtil, Logging }
 import org.apache.hadoop.fs.Path
@@ -82,7 +85,13 @@ object RunParser extends Logging {
     }
   }
 
-  private[spark] def saveRDDAsParquetAndCleanUp(sqlContext: org.apache.spark.sql.SQLContext, thisRDD: org.apache.spark.sql.SchemaRDD, workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
+  private[spark] def saveRDDAsParquetAndCleanUp(
+    sqlContext: org.apache.spark.sql.SQLContext,
+    thisRDD: org.apache.spark.sql.SchemaRDD,
+    workingDir: String,
+    prefixOfFile: String,
+    dirToSynchronize: String): Boolean = {
+
     def sanityCheckParquetGeneration(whereWasItSaved: String): Boolean = {
       // Parquet files are self-describing so the schema is preserved.
       val rddFromParquetFile = sqlContext.parquetFile(whereWasItSaved)
@@ -108,7 +117,8 @@ object RunParser extends Logging {
     // sanity check:
     if (sanityCheckParquetGeneration(whereWasItSaved = parquetFileName)) {
       synchronizeMainFolderAndCleanSource(mainFolder = dirToSynchronize, sourceFolder = parquetFileName)
-    }
+    } else
+      false
   }
 
   private[spark] def saveEventsRDDAsParquetAndCleanUp(sc: SparkContext, sqlContext: org.apache.spark.sql.SQLContext, eventsRDD: RDD[EventDetail], workingDir: String, prefixOfFile: String, dirToSynchronize: String): Unit = {
@@ -141,11 +151,7 @@ object RunParser extends Logging {
   }
 
   def main(args: Array[String]) {
-    // TODO: put all these constants in a config file and/or read them from parameters in call
-    val HDFS_ROOT_LOCATION = "/source/canpipe/parquet" // root hdfs directory where data will live, once generated
-    val HDFS_WORKING_LOCATION = s"${HDFS_ROOT_LOCATION}/workingTmp"
-    val HDFS_EVENTS_WORKING_LOCATION = s"${HDFS_WORKING_LOCATION}/events" // directory where events will live, once generated
-    val HDFS_EVENTS_LOCATION = s"${HDFS_ROOT_LOCATION}/events" // directory where events will live, once generated
+    import canpipe._
     val argsParsed = parseArgs(args.toList)
     if (!argsParsed.contains(FILENAMELABEL)) {
       logger.info("Usage: RunParser [--hdfsfilename filename]")
@@ -174,18 +180,59 @@ object RunParser extends Logging {
       //
       val sc = new SparkContext()
       val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-      import sqlContext.createSchemaRDD
+      import sqlContext._
       // TODO: clean syntax
-      val rddF = sc.textFile(hdfsFileName)
-      val allEvents = myParser.parse(new XMLPiecePerLine("root", rddF))
+      val rddTF = sc.textFile(hdfsFileName)
+      val fs = new XMLPiecePerLine("root", rddTF)
+      val tables = myParser.parse(fs)
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
-      val cleanedFileName = fileNameNoDir.replace(" ", "").replace("-", "")
-      val (timeToSave, _) =
+      val cleanedSrcFileName = fileNameNoDir.replace(" ", "").replace("-", "")
+      // event table
+      val events = tables.map(_.events).flatMap(identity(_))
+      val (timeToSaveEvents, eventProperlySaved) =
         util.Base.timeInMs {
-          saveEventsRDDAsParquetAndCleanUp(sc, sqlContext, allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
-          // saveRDDAsParquetAndCleanUp(sqlContext, thisRDD = allEvents, workingDir = HDFS_EVENTS_WORKING_LOCATION, prefixOfFile = cleanedFileName, dirToSynchronize = HDFS_EVENTS_LOCATION)
+          saveRDDAsParquetAndCleanUp(
+            sqlContext,
+            thisRDD = events,
+            workingDir = globalConf.eventsFolders.workingTmp,
+            prefixOfFile = cleanedSrcFileName,
+            dirToSynchronize = globalConf.eventsFolders.output)
         }.run
-      logger.info(s"Saving took ${timeToSave} ms.!!!")
+      if (!eventProperlySaved) {
+        println(s"Event *NOT PROPERLY SAVED*, aborting this non-sense right now!!!")
+      } else {
+        //  headings table
+        val headings = tables.map(_.headings).flatMap(identity(_))
+        val (timeToSaveHeadings, headingsProperlySaved) =
+          util.Base.timeInMs {
+            saveRDDAsParquetAndCleanUp(
+              sqlContext,
+              thisRDD = headings,
+              workingDir = globalConf.headingsFolders.workingTmp,
+              prefixOfFile = s"${cleanedSrcFileName}.headings",
+              dirToSynchronize = globalConf.headingsFolders.output)
+          }.run
+        // directories table
+        val directories = tables.map(_.directories).flatMap(identity(_))
+        val (timeToSaveDirectories, directoriesProperlySaved) =
+          util.Base.timeInMs {
+            saveRDDAsParquetAndCleanUp(
+              sqlContext,
+              thisRDD = directories,
+              workingDir = globalConf.directoriesFolders.workingTmp,
+              prefixOfFile = s"${cleanedSrcFileName}.directories",
+              dirToSynchronize = globalConf.directoriesFolders.output)
+          }.run
+        println(s"Saving EVENTS took ${timeToSaveEvents} ms. (added to location = ${globalConf.eventsFolders.output})")
+        if (headingsProperlySaved)
+          println(s"HEADINGS saved in ${timeToSaveHeadings} ms. (added to location = ${globalConf.headingsFolders.output})")
+        else
+          println("HEADINGS **NOT SAVED**")
+        if (directoriesProperlySaved)
+          println(s"DIRECTORIES saved in ${timeToSaveDirectories} ms. (added to location = ${globalConf.directoriesFolders.output})")
+        else
+          println("DIRECTORIES **NOT SAVED**")
+      }
     }
 
   }
