@@ -30,7 +30,8 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
           val fieldValue = getOrEmpty(field)
           errHandler.handle(theReader.read(fieldValue)).left.map { aMsg => s"${field.asString} incorrectly set to '${fieldValue}': ${aMsg}" } match {
             case Left(errMsg) =>
-              logger.error(errMsg); theReader.default
+              logger.debug(s"${errMsg} (returning default value '${theReader.default}'})")
+              theReader.default
             case Right(v) => v
           }
         }
