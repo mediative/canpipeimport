@@ -1,5 +1,6 @@
 package spark.util.xml
 
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import util.xml.{ Base => XMLUtil }
 
@@ -14,4 +15,7 @@ case class XMLPiecePerLine(starter: String, rdd: RDD[String]) extends Structure 
       filter { XMLUtil.isValidEntry(_) } // keeps only well-formed lines
   }
 
+  def this(sc: SparkContext, starter: String, e: scala.xml.Elem) = {
+    this(starter, sc.parallelize(e.toString().split("\n")))
+  }
 }
