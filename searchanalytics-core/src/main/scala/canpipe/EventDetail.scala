@@ -93,18 +93,26 @@ object EventDetail extends Logging {
     val requestUri: String
   }
 
-  object BasicInfo {
+  object BasicInfo extends Logging {
     private def build(id: String, timestamp: String, timestampIdOpt: Option[AnalyticsTimestampId], site: String,
                       siteLanguageOpt: Option[Language],
                       userId: String, apiKey: String, userSessionId: String, transactionDuration: Long,
                       isResultCached: Boolean, referrer: String, pageName: String, requestUri: String): Option[BasicInfo] = {
-      if (transactionDuration < 0) None
-      else {
-        timestampIdOpt.flatMap { tId =>
+      if (transactionDuration < 0) {
+        logger.debug(s"Transaction duration ${transactionDuration} is invalid")
+        None
+      } else {
+        timestampIdOpt.map { tId =>
           siteLanguageOpt.map { lang =>
-            new BasicInfoImpl(
-              id, timestamp, tId, site, lang, userId, apiKey, userSessionId, transactionDuration, isResultCached, referrer, pageName, requestUri)
+            Some(new BasicInfoImpl(
+              id, timestamp, tId, site, lang, userId, apiKey, userSessionId, transactionDuration, isResultCached, referrer, pageName, requestUri))
+          }.getOrElse {
+            logger.debug("Language site is undefined")
+            None
           }
+        }.getOrElse {
+          logger.debug("Timestamp is undefined")
+          None
         }
       }
     }
@@ -224,7 +232,7 @@ object EventDetail extends Logging {
     importantFields.
       find { case (_, errorCondition) => errorCondition }.
       map { case (fieldName, _) => fieldName }.
-      map { fieldName => println(s"${fieldName} is empty"); None }. // TODO: logger.error
+      map { fieldName => logger.error(s"${fieldName} is empty"); None }.
       getOrElse(Some(e))
   }
 
