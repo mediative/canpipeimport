@@ -11,7 +11,7 @@ object Elem extends Logging {
 
   import util.xml.Base._
   def apply(n: scala.xml.Elem): Option[Elem] = {
-    val totalElems = n.child.filter(!_.isAtom).size
+    val totalElems = n.child.count(!_.isAtom)
     val importantFields = List(
       (XMLFields.eventId.toString, (n \ XMLFields.eventId.asList).size),
       (XMLFields.eventTimestamp.toString, (n \ XMLFields.eventTimestamp.asList).size))
