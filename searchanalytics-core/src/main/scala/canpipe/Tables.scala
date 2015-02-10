@@ -3,7 +3,7 @@ package canpipe
 import canpipe.EventDetail._
 import canpipe.xml.XMLFields._
 import canpipe.xml.{ Elem => CanpipeXMLElem }
-import util.Logging
+import util.{ ErrorLogging, Logging }
 import util.errorhandler.Base.GenericHandler
 import util.types.reader.Base.ReadSym
 import util.xml.{ Field => XMLField }
@@ -23,7 +23,7 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
       }
 
       // Readers helpers:
-      object FieldReader extends Logging {
+      object FieldReader extends ErrorLogging {
         import util.errorhandler.Base.{ LongHandler, IntHandler, DoubleHandler, BooleanHandler }
         import util.types.reader.Base.{ LongReader, IntReader, DoubleReader, BooleanReader }
         def read[T](field: util.xml.Field)(implicit theReader: ReadSym[T], errHandler: GenericHandler[T]): T = {
@@ -64,7 +64,11 @@ case class Tables(anXMLNode: CanpipeXMLElem) {
         userId = getOrEmpty(userId),
         apiKey = getOrEmpty(apiKey),
         userSessionId = getOrEmpty(userSessionId),
-        transactionDuration = FieldReader.read[Long](transactionDuration),
+        transactionDuration = {
+          // as the duration can not be negative I enforce it here:
+          val d = FieldReader.read[Long](transactionDuration)
+          if (d < 0) 1 else d
+        },
         isResultCached = FieldReader.read[Boolean](isResultCached),
         referrer = getOrEmpty(eventReferrer),
         pageName = getOrEmpty(pageName),
