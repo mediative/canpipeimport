@@ -5,6 +5,7 @@ import util.wrapper.Wrapper
 
 trait Elem extends Wrapper[xml.Elem] {
   def value: xml.Elem
+  def numChilds: Int = value.child.count(!_.isAtom)
 }
 
 object Elem extends Logging {
