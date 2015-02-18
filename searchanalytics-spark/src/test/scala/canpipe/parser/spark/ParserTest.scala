@@ -103,21 +103,21 @@ class ParserTest extends FreeSpec with BeforeAndAfterAll {
 
       "parsing 3 different types of events (impression, business detail, navigational click)" in {
         val rddF = sc.textFile(getClass.getResource("/CanPipeExample.xml").getPath)
-        val rdd = myParser.parse(new XMLPiecePerLine("root", rddF)).groupBy(_.events.map(_.basicInfo.id))
+        val rdd = myParser.parse(new XMLPiecePerLine("root", rddF)).groupBy(_.eventOpt.map(_.basicInfo.id))
         assert(rdd.count() == 3)
       }
     }
 
     "should generate the right amount of headings" in {
       val rddResults = myParser.parse(new XMLPiecePerLine(sc, "root", toOneLiner(twoDirsTwoHeadingsEvent)))
-      withClue(s"Event not generated") { assert(rddResults.map(_.events).collect().head.isDefined) }
+      withClue(s"Event not generated") { assert(rddResults.map(_.eventOpt).collect().head.isDefined) }
       val headings = rddResults.map(_.headings).collect().head
       assert(headings.size == 2)
     }
 
     "should generate the right amount of directories" in {
       val rddResults = myParser.parse(new XMLPiecePerLine(sc, "root", toOneLiner(twoDirsTwoHeadingsEvent)))
-      withClue(s"Event not generated") { assert(rddResults.map(_.events).collect().head.isDefined) }
+      withClue(s"Event not generated") { assert(rddResults.map(_.eventOpt).collect().head.isDefined) }
       val directories = rddResults.map(_.directories).collect().head
       assert(directories.size == 2)
     }
@@ -156,7 +156,7 @@ class ParserTest extends FreeSpec with BeforeAndAfterAll {
       "find less than 0.5% of events of errors in data" in {
         rddsAndExpectedNumberOfEvents.foreach {
           case EventsParsed(fileName, rdd, expectedEvents, parsingTimes) =>
-            val rddOfEvents = rdd.flatMap(_.events)
+            val rddOfEvents = rdd.flatMap(_.eventOpt)
             val howManyEvents = rddOfEvents.count()
             val lowerLimit = expectedEvents * .995
             withClue(s"File parsed: '${fileName}', lower limit = ${lowerLimit}") { assert(howManyEvents >= lowerLimit) }
@@ -197,7 +197,7 @@ class ParserTest extends FreeSpec with BeforeAndAfterAll {
       "not report events with empty eventId's" in {
         rddsAndExpectedNumberOfEvents.foreach {
           case EventsParsed(fileName, rdd, expectedEvents, parsingTimes) =>
-            val rddOfEvents = rdd.flatMap(_.events)
+            val rddOfEvents = rdd.flatMap(_.eventOpt)
             val howManyEmptyEventIds = rddOfEvents.filter(_.basicInfo.id.trim.isEmpty).count()
             assert(howManyEmptyEventIds == 0)
         }
@@ -206,7 +206,7 @@ class ParserTest extends FreeSpec with BeforeAndAfterAll {
       "not report events with invalid timestamps" in {
         rddsAndExpectedNumberOfEvents.foreach {
           case EventsParsed(fileName, rdd, expectedEvents, parsingTimes) =>
-            val rddOfEvents = rdd.flatMap(_.events)
+            val rddOfEvents = rdd.flatMap(_.eventOpt)
             val howManyEmptyTimestamps = rddOfEvents.filter(e => e.basicInfo.timestamp.trim.isEmpty).count()
             withClue(s"${fileName}: 'eventTimestamp's invalid") { assert(howManyEmptyTimestamps == 0) }
             val howManyInvalidTimestamps = rddOfEvents.filter(e => e.basicInfo.timestampId.value < 0).count()

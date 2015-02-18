@@ -188,7 +188,7 @@ object RunParser extends Logging {
       val fileNameNoDir = hdfsFileName.split("/").reverse.head
       val cleanedSrcFileName = fileNameNoDir.replace(" ", "").replace("-", "")
       // event table
-      val events = tables.map(_.events).flatMap(identity(_))
+      val events = tables.map(_.eventOpt).flatMap(identity(_))
       val (timeToSaveEvents, eventProperlySaved) =
         util.Base.timeInMs {
           saveRDDAsParquetAndCleanUp(

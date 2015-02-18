@@ -14,15 +14,19 @@ import scala.util.control.Exception._
 /**
  * TODO: doc.
  */
+object Tables {
+  def getOrEmpty(anXMLNode: CanpipeXMLElem, anXMLField: XMLField): String = {
+    (anXMLNode.value \ anXMLField.asList).mkString(",")
+  }
+}
+
 case class Tables(anXMLNode: CanpipeXMLElem) {
 
-  val (events: Option[EventDetail], headings: Set[EventsHeadingsAssociation], directories: Set[EventsDirectoriesAssociation]) = {
+  val (eventOpt: Option[EventDetail], headings: Set[EventsHeadingsAssociation], directories: Set[EventsDirectoriesAssociation]) = {
     {
-      def getOrEmpty(anXMLField: XMLField): String = {
-        (anXMLNode.value \ anXMLField.asList).mkString(",")
-      }
-
       // Readers helpers:
+      def getOrEmpty(anXMLField: XMLField): String = Tables.getOrEmpty(anXMLNode, anXMLField)
+
       object FieldReader extends ErrorLogging {
         import util.errorhandler.Base.{ LongHandler, IntHandler, DoubleHandler, BooleanHandler }
         import util.types.reader.Base.{ LongReader, IntReader, DoubleReader, BooleanReader }

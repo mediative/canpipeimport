@@ -209,7 +209,7 @@ case class EventDetail(value: BasicEventDetail) extends Wrapper[BasicEventDetail
 object EventDetail extends Logging {
 
   def apply(anXMLNode: CanpipeXMLElem): Option[EventDetail] = {
-    Tables(anXMLNode).events.map(new EventDetail(_))
+    Tables(anXMLNode).eventOpt.map(new EventDetail(_))
   }
 
   def saveAsParquet(sc: SparkContext, parquetFileName: String, c: RDD[EventDetail], force: Boolean = false): Boolean = {
